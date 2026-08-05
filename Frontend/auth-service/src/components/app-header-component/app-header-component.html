@@ -1,4 +1,13 @@
 <header class="app-header">
-  <h1>Auth Service</h1>
-  <span>Administrator Panel</span>
+  <div class="brand">
+    <h1>Auth Service</h1>
+    <span>Administrator Panel</span>
+  </div>
+
+  @if (currentUser(); as user) {
+    <div class="user-actions">
+      <span>Hello {{ user }}!</span>
+      <button matButton="outlined" type="button" (click)="logout()">Logout</button>
+    </div>
+  }
 </header>

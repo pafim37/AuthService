@@ -1,5 +1,5 @@
 <section class="login-page">
-  <form class="login-form">
+  <form class="login-form" [formGroup]="loginForm" (ngSubmit)="signIn()">
     <mat-card class="login-card" appearance="outlined">
       <mat-card-header>
         <mat-card-title>Sign in</mat-card-title>
@@ -9,12 +9,17 @@
       <mat-card-content>
         <mat-form-field appearance="outline">
           <mat-label>Login</mat-label>
-          <input matInput type="text" autocomplete="username" />
+          <input matInput type="text" formControlName="username" autocomplete="username" />
         </mat-form-field>
 
         <mat-form-field appearance="outline">
           <mat-label>Password</mat-label>
-          <input matInput type="password" autocomplete="current-password" />
+          <input
+            matInput
+            type="password"
+            formControlName="password"
+            autocomplete="current-password"
+          />
         </mat-form-field>
       </mat-card-content>
 
