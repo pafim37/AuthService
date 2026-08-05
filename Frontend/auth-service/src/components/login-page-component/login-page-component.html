@@ -1,7 +1,26 @@
-<mat-form-field appearance="fill">
-    <mat-label>Login</mat-label>
-    <input matInput type="text"/>
-    <mat-label>Password</mat-label>
-    <input matInput type="password"/>
-    <button matButton="filled" color="primary">Sign In</button>
-</mat-form-field>
+<section class="login-page">
+  <form class="login-form">
+    <mat-card class="login-card" appearance="outlined">
+      <mat-card-header>
+        <mat-card-title>Sign in</mat-card-title>
+        <mat-card-subtitle>Use your account credentials</mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content>
+        <mat-form-field appearance="outline">
+          <mat-label>Login</mat-label>
+          <input matInput type="text" autocomplete="username" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Password</mat-label>
+          <input matInput type="password" autocomplete="current-password" />
+        </mat-form-field>
+      </mat-card-content>
+
+      <mat-card-actions>
+        <button matButton="filled" color="primary" type="submit">Sign In</button>
+      </mat-card-actions>
+    </mat-card>
+  </form>
+</section>

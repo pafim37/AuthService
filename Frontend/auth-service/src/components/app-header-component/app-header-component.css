@@ -1,0 +1,28 @@
+.app-header {
+
+  min-height: 64px;
+  padding: 16px 32px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  background: #ffffff;
+  color: var(--mat-sys-on-surface);
+}
+
+.app-header h1 {
+  margin: 0;
+  font: var(--mat-sys-title-large);
+  font-weight: 500;
+}
+
+.app-header span {
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-medium);
+}
+
+@media (max-width: 600px) {
+  .app-header {
+    align-items: flex-start;
+    flex-direction: column;
+    justify-content: center;
+    padding: 12px 20px;
+  }
+}
