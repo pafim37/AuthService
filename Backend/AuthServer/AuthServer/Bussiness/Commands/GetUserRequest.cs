@@ -3,5 +3,5 @@ using MediatR;
 
 namespace AuthServer.Bussiness.Commands
 {
-    public record GetUserRequest(string Login) : IRequest<UserEntity> { }
+    public record GetUserRequest(string Login) : IRequest<UserEntity?> { }
 }

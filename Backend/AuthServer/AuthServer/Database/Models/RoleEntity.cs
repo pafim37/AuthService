@@ -6,7 +6,8 @@ namespace AuthServer.Database.Models
     {
         [Key]
         public Guid Id { get; set; }
+        [Required]
         public string? Name { get; set; }
-        public ICollection<PrivilegeEntity>? Privileges { get; set; }
+        public ICollection<PrivilegeEntity> Privileges { get; set; } = [];
     }
 }

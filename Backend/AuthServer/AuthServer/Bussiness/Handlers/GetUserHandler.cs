@@ -5,9 +5,9 @@ using MediatR;
 
 namespace AuthServer.Bussiness.Handlers
 {
-    public class GetUserHandler(IUserRepository userRepository) : IRequestHandler<GetUserRequest, UserEntity>
+    public class GetUserHandler(IUserRepository userRepository) : IRequestHandler<GetUserRequest, UserEntity?>
     {
-        public async Task<UserEntity> Handle(GetUserRequest request, CancellationToken cancellationToken)
+        public async Task<UserEntity?> Handle(GetUserRequest request, CancellationToken cancellationToken)
         {
             return await userRepository.GetUserByLoginAsync(request.Login, cancellationToken).ConfigureAwait(false);
         }

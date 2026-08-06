@@ -1,55 +1,126 @@
-﻿using AuthServer.Database.Models;
+using AuthServer.Database.Models;
 using AuthServer.Database.Repositories;
+using AuthServer.DataTransferObjects;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AuthServer.Controllers
 {
     [ApiController]
-    [Route("api/privilege")]
+    [Route("api/privileges")]
     public class PrivilegeController(IPrivilegeRepository privilegeRepository) : ControllerBase
     {
         [HttpGet]
         public async Task<IActionResult> GetPrivileges(CancellationToken cancellationToken)
         {
-            var privileges = await privilegeRepository.GetAllPrivilegesAsync(cancellationToken);
-            return Ok(privileges);
+            IEnumerable<PrivilegeEntity> privileges = await privilegeRepository.GetAllPrivilegesAsync(cancellationToken).ConfigureAwait(false);
+            return Ok(privileges.Select(ToDto));
         }
 
-        [HttpGet("{name}")]
-        public async Task<IActionResult> GetPrivilege(string name, CancellationToken cancellationToken)
+        [HttpGet("{id:guid}")]
+        public async Task<IActionResult> GetPrivilege(Guid id, CancellationToken cancellationToken)
         {
-            var privilege = await privilegeRepository.GetPrivilegeByNameAsync(name, cancellationToken);
-            if (privilege == null)
+            PrivilegeEntity? privilege = await privilegeRepository.GetPrivilegeByIdAsync(id, cancellationToken).ConfigureAwait(false);
+            if (privilege is null)
             {
-                return NotFound($"Privilege with name '{name}' not found.");
+                return NotFound($"Privilege with id '{id}' not found.");
             }
-            return Ok(privilege);
+
+            return Ok(ToDto(privilege));
         }
 
-        [HttpPost("{newPrivilegeName}")]
-        public async Task<IActionResult> CreateNewPrivilege(string newPrivilegeName, CancellationToken cancellationToken)
+        [HttpPost]
+        public async Task<IActionResult> CreateNewPrivilege([FromBody] PrivilegeRequestDto privilegeDto, CancellationToken cancellationToken)
         {
-            var privilege = await privilegeRepository.GetPrivilegeByNameAsync(newPrivilegeName, cancellationToken);
-            if (privilege != null)
+            if (string.IsNullOrWhiteSpace(privilegeDto.Name))
             {
-                return Conflict($"Privilege with name '{newPrivilegeName}' already exists.");
+                return BadRequest("Privilege name is required.");
             }
 
-            PrivilegeEntity newPrivilege = new() { Name = newPrivilegeName };
-            await privilegeRepository.CreatePrivilegeAsync(newPrivilege, cancellationToken);
-            return CreatedAtAction(nameof(CreateNewPrivilege), new { name = newPrivilegeName }, newPrivilege);
+            PrivilegeEntity? existingPrivilege = await privilegeRepository.GetPrivilegeByNameAsync(privilegeDto.Name, cancellationToken).ConfigureAwait(false);
+            if (existingPrivilege is not null)
+            {
+                return Conflict($"Privilege with name '{privilegeDto.Name}' already exists.");
+            }
+
+            PrivilegeEntity newPrivilege = new()
+            {
+                Id = Guid.NewGuid(),
+                Name = privilegeDto.Name
+            };
+
+            await privilegeRepository.CreatePrivilegeAsync(newPrivilege, cancellationToken).ConfigureAwait(false);
+            return CreatedAtAction(nameof(GetPrivilege), new { id = newPrivilege.Id }, ToDto(newPrivilege));
         }
 
-        [HttpDelete]
-        public async Task<IActionResult> DeletePrivilege(string name, CancellationToken cancellationToken)
+        [HttpPut("{id:guid}")]
+        public async Task<IActionResult> UpdatePrivilege(Guid id, [FromBody] PrivilegeRequestDto privilegeDto, CancellationToken cancellationToken)
         {
-            var privilegeEntity = await privilegeRepository.GetPrivilegeByNameAsync(name, cancellationToken);
-            if (privilegeEntity == null)
+            if (string.IsNullOrWhiteSpace(privilegeDto.Name))
             {
-                return NotFound($"Privilege with name '{name}' not found.");
+                return BadRequest("Privilege name is required.");
             }
-            await privilegeRepository.RemovePrivilegeAsync(privilegeEntity, cancellationToken);
+
+            PrivilegeEntity? privilege = await privilegeRepository.GetPrivilegeByIdAsync(id, cancellationToken).ConfigureAwait(false);
+            if (privilege is null)
+            {
+                return NotFound($"Privilege with id '{id}' not found.");
+            }
+
+            PrivilegeEntity? privilegeWithSameName = await privilegeRepository.GetPrivilegeByNameAsync(privilegeDto.Name, cancellationToken).ConfigureAwait(false);
+            if (privilegeWithSameName is not null && privilegeWithSameName.Id != id)
+            {
+                return Conflict($"Privilege with name '{privilegeDto.Name}' already exists.");
+            }
+
+            privilege.Name = privilegeDto.Name;
+            await privilegeRepository.UpdatePrivilegeAsync(privilege, cancellationToken).ConfigureAwait(false);
+            return Ok(ToDto(privilege));
+        }
+
+        [HttpPatch("{id:guid}")]
+        public async Task<IActionResult> PatchPrivilege(Guid id, [FromBody] PrivilegeRequestDto privilegeDto, CancellationToken cancellationToken)
+        {
+            PrivilegeEntity? privilege = await privilegeRepository.GetPrivilegeByIdAsync(id, cancellationToken).ConfigureAwait(false);
+            if (privilege is null)
+            {
+                return NotFound($"Privilege with id '{id}' not found.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(privilegeDto.Name))
+            {
+                PrivilegeEntity? privilegeWithSameName = await privilegeRepository.GetPrivilegeByNameAsync(privilegeDto.Name, cancellationToken).ConfigureAwait(false);
+                if (privilegeWithSameName is not null && privilegeWithSameName.Id != id)
+                {
+                    return Conflict($"Privilege with name '{privilegeDto.Name}' already exists.");
+                }
+
+                privilege.Name = privilegeDto.Name;
+            }
+
+            await privilegeRepository.UpdatePrivilegeAsync(privilege, cancellationToken).ConfigureAwait(false);
+            return Ok(ToDto(privilege));
+        }
+
+        [HttpDelete("{id:guid}")]
+        public async Task<IActionResult> DeletePrivilege(Guid id, CancellationToken cancellationToken)
+        {
+            PrivilegeEntity? privilege = await privilegeRepository.GetPrivilegeByIdAsync(id, cancellationToken).ConfigureAwait(false);
+            if (privilege is null)
+            {
+                return NotFound($"Privilege with id '{id}' not found.");
+            }
+
+            await privilegeRepository.RemovePrivilegeAsync(privilege, cancellationToken).ConfigureAwait(false);
             return NoContent();
+        }
+
+        private static PrivilegeDto ToDto(PrivilegeEntity privilege)
+        {
+            return new PrivilegeDto
+            {
+                Id = privilege.Id,
+                Name = privilege.Name
+            };
         }
     }
 }

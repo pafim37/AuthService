@@ -19,6 +19,9 @@ builder.Services.AddDbContext<AuthContext>(options =>
 
 
 builder.Services.AddScoped<IPrivilegeRepository, PrivilegeRepository>();
+builder.Services.AddScoped<IRoleRepository, RoleRepository>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddMediatR(configuration => configuration.RegisterServicesFromAssemblyContaining<Program>());
 
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -26,6 +29,12 @@ builder.Services.AddOpenApi();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+using (IServiceScope scope = app.Services.CreateScope())
+{
+    AuthContext authContext = scope.ServiceProvider.GetRequiredService<AuthContext>();
+    await DatabaseSeeder.SeedAsync(authContext);
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

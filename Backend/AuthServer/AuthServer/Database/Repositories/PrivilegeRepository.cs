@@ -17,9 +17,20 @@ namespace AuthServer.Database.Repositories
             return await authContext.Privileges.ToListAsync(cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task<PrivilegeEntity> GetPrivilegeByNameAsync(string name, CancellationToken cancellationToken)
+        public async Task<PrivilegeEntity?> GetPrivilegeByIdAsync(Guid id, CancellationToken cancellationToken)
+        {
+            return await authContext.Privileges.FirstOrDefaultAsync(p => p.Id == id, cancellationToken).ConfigureAwait(false);
+        }
+
+        public async Task<PrivilegeEntity?> GetPrivilegeByNameAsync(string name, CancellationToken cancellationToken)
         {
             return await authContext.Privileges.FirstOrDefaultAsync(p => p.Name == name, cancellationToken).ConfigureAwait(false);
+        }
+
+        public async Task UpdatePrivilegeAsync(PrivilegeEntity privilege, CancellationToken cancellationToken)
+        {
+            authContext.Privileges.Update(privilege);
+            await authContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
 
         public async Task RemovePrivilegeAsync(PrivilegeEntity privilege, CancellationToken cancellationToken)

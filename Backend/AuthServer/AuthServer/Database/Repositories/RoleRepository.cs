@@ -1,27 +1,50 @@
-﻿using AuthServer.Database.Models;
+using AuthServer.Database.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace AuthServer.Database.Repositories
 {
-    public class RoleRepository : IRoleRepository
+    public class RoleRepository(AuthContext authContext) : IRoleRepository
     {
-        public Task CreateRoleAsync(RoleEntity role)
+        public async Task CreateRoleAsync(RoleEntity role, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            await authContext.Roles.AddAsync(role, cancellationToken).ConfigureAwait(false);
+            await authContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
 
-        public Task<IEnumerable<RoleEntity>> GetAllRolesAsync()
+        public async Task<IEnumerable<RoleEntity>> GetAllRolesAsync(CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            return await authContext.Roles
+                .Include(role => role.Privileges)
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
         }
 
-        public Task<RoleEntity> GetRoleByIdAsync(Guid id)
+        public async Task<RoleEntity?> GetRoleByIdAsync(Guid id, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            return await authContext.Roles
+                .Include(role => role.Privileges)
+                .FirstOrDefaultAsync(role => role.Id == id, cancellationToken)
+                .ConfigureAwait(false);
         }
 
-        public Task RemoveRoleAsync(Guid id)
+        public async Task<RoleEntity?> GetRoleByNameAsync(string name, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            return await authContext.Roles
+                .Include(role => role.Privileges)
+                .FirstOrDefaultAsync(role => role.Name == name, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        public async Task UpdateRoleAsync(RoleEntity role, CancellationToken cancellationToken)
+        {
+            authContext.Roles.Update(role);
+            await authContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        public async Task RemoveRoleAsync(RoleEntity role, CancellationToken cancellationToken)
+        {
+            authContext.Roles.Remove(role);
+            await authContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
     }
 }

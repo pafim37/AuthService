@@ -14,5 +14,29 @@ namespace AuthServer.Database
              Database.EnsureCreated();
         }
 
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<UserEntity>()
+                .HasIndex(user => user.Login)
+                .IsUnique();
+
+            modelBuilder.Entity<RoleEntity>()
+                .HasIndex(role => role.Name)
+                .IsUnique();
+
+            modelBuilder.Entity<PrivilegeEntity>()
+                .HasIndex(privilege => privilege.Name)
+                .IsUnique();
+
+            modelBuilder.Entity<RoleEntity>()
+                .HasMany(role => role.Privileges)
+                .WithMany();
+
+            modelBuilder.Entity<UserEntity>()
+                .HasOne(user => user.Role)
+                .WithMany()
+                .HasForeignKey(user => user.RoleId)
+                .OnDelete(DeleteBehavior.Restrict);
+        }
     }
 }
