@@ -2,14 +2,18 @@ using AuthServer.Database.Models;
 using AuthServer.Database.Repositories;
 using AuthServer.DataTransferObjects;
 using AuthServer.Helpers;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AuthServer.Controllers
 {
     [ApiController]
+    [Authorize(Policy = "FullPrivilege")]
     [Route("api/users")]
     public class UserController(IUserRepository userRepository, IRoleRepository roleRepository) : ControllerBase
     {
+        private const string ProtectedAdminLogin = "admin";
+
         [HttpGet]
         public async Task<IActionResult> GetUsers(CancellationToken cancellationToken)
         {
@@ -140,6 +144,11 @@ namespace AuthServer.Controllers
             if (user is null)
             {
                 return NotFound($"User with id '{id}' not found.");
+            }
+
+            if (string.Equals(user.Login, ProtectedAdminLogin, StringComparison.OrdinalIgnoreCase))
+            {
+                return Conflict("Built-in admin user cannot be deleted.");
             }
 
             await userRepository.RemoveUserAsync(user, cancellationToken).ConfigureAwait(false);

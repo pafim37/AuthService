@@ -1,14 +1,18 @@
 using AuthServer.Database.Models;
 using AuthServer.Database.Repositories;
 using AuthServer.DataTransferObjects;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AuthServer.Controllers
 {
     [ApiController]
+    [Authorize(Policy = "FullPrivilege")]
     [Route("api/roles")]
     public class RoleController(IRoleRepository roleRepository, IPrivilegeRepository privilegeRepository) : ControllerBase
     {
+        private const string ProtectedAdministratorRoleName = "administrator";
+
         [HttpGet]
         public async Task<IActionResult> GetRoles(CancellationToken cancellationToken)
         {
@@ -142,6 +146,11 @@ namespace AuthServer.Controllers
             if (role is null)
             {
                 return NotFound($"Role with id '{id}' not found.");
+            }
+
+            if (string.Equals(role.Name, ProtectedAdministratorRoleName, StringComparison.OrdinalIgnoreCase))
+            {
+                return Conflict("Built-in administrator role cannot be deleted.");
             }
 
             await roleRepository.RemoveRoleAsync(role, cancellationToken).ConfigureAwait(false);

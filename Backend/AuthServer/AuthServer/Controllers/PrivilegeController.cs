@@ -1,14 +1,18 @@
 using AuthServer.Database.Models;
 using AuthServer.Database.Repositories;
 using AuthServer.DataTransferObjects;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AuthServer.Controllers
 {
     [ApiController]
+    [Authorize(Policy = "FullPrivilege")]
     [Route("api/privileges")]
     public class PrivilegeController(IPrivilegeRepository privilegeRepository) : ControllerBase
     {
+        private const string ProtectedFullPrivilegeName = "Full";
+
         [HttpGet]
         public async Task<IActionResult> GetPrivileges(CancellationToken cancellationToken)
         {
@@ -108,6 +112,11 @@ namespace AuthServer.Controllers
             if (privilege is null)
             {
                 return NotFound($"Privilege with id '{id}' not found.");
+            }
+
+            if (string.Equals(privilege.Name, ProtectedFullPrivilegeName, StringComparison.OrdinalIgnoreCase))
+            {
+                return Conflict("Built-in Full privilege cannot be deleted.");
             }
 
             await privilegeRepository.RemovePrivilegeAsync(privilege, cancellationToken).ConfigureAwait(false);
