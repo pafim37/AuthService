@@ -33,6 +33,7 @@ var app = builder.Build();
 using (IServiceScope scope = app.Services.CreateScope())
 {
     AuthContext authContext = scope.ServiceProvider.GetRequiredService<AuthContext>();
+    await authContext.Database.MigrateAsync();
     await DatabaseSeeder.SeedAsync(authContext);
 }
 

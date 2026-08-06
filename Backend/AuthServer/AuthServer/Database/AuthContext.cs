@@ -11,7 +11,6 @@ namespace AuthServer.Database
 
         public AuthContext(DbContextOptions options) : base(options)
         {
-             Database.EnsureCreated();
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
