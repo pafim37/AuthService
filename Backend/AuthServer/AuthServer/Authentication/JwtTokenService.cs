@@ -9,7 +9,7 @@ namespace AuthServer.Authentication
 {
     public class JwtTokenService(IConfiguration configuration)
     {
-        public AuthTokenDto CreateToken(UserEntity user)
+        public AccessTokenResult CreateAccessToken(UserEntity user)
         {
             IConfigurationSection jwtSettings = configuration.GetSection("Jwt");
             string signingKey = jwtSettings["AuthServiceKey"]
@@ -30,7 +30,8 @@ namespace AuthServer.Authentication
                 new(JwtRegisteredClaimNames.UniqueName, user.Login ?? string.Empty),
                 new(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new(ClaimTypes.Name, user.Login ?? string.Empty),
-                new(ClaimTypes.Role, user.Role?.Name ?? string.Empty)
+                new(ClaimTypes.Role, user.Role?.Name ?? string.Empty),
+                new("session_version", user.SessionVersion.ToString())
             ];
 
             if (user.Role is not null)
@@ -50,11 +51,7 @@ namespace AuthServer.Authentication
                 expires: expiresAtUtc,
                 signingCredentials: credentials);
 
-            return new AuthTokenDto
-            {
-                AccessToken = new JwtSecurityTokenHandler().WriteToken(token),
-                ExpiresAtUtc = expiresAtUtc
-            };
+            return new AccessTokenResult(new JwtSecurityTokenHandler().WriteToken(token), expiresAtUtc);
         }
     }
 }

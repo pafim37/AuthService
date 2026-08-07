@@ -8,6 +8,7 @@ namespace AuthServer.Database
         public DbSet<UserEntity> Users { get; set; }
         public DbSet<RoleEntity> Roles { get; set; }
         public DbSet<PrivilegeEntity> Privileges { get; set; }
+        public DbSet<RefreshTokenEntity> RefreshTokens { get; set; }
 
         public AuthContext(DbContextOptions options) : base(options)
         {
@@ -36,6 +37,16 @@ namespace AuthServer.Database
                 .WithMany()
                 .HasForeignKey(user => user.RoleId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<RefreshTokenEntity>()
+                .HasIndex(refreshToken => refreshToken.TokenHash)
+                .IsUnique();
+
+            modelBuilder.Entity<RefreshTokenEntity>()
+                .HasOne(refreshToken => refreshToken.User)
+                .WithMany()
+                .HasForeignKey(refreshToken => refreshToken.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

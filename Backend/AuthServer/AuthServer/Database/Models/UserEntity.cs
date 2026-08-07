@@ -13,6 +13,8 @@ namespace AuthServer.Database.Models
         [Required]
         public string? PasswordHashed { get; set; }
 
+        public int SessionVersion { get; set; }
+
         [Required]
         public Guid RoleId { get; set; }
         

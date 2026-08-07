@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using System.Security.Claims;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -30,6 +31,7 @@ builder.Services.AddScoped<IPrivilegeRepository, PrivilegeRepository>();
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<JwtTokenService>();
+builder.Services.AddScoped<RefreshTokenService>();
 builder.Services.AddMediatR(configuration => configuration.RegisterServicesFromAssemblyContaining<Program>());
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -45,6 +47,34 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey)),
             ValidateLifetime = true,
             ClockSkew = TimeSpan.FromMinutes(1)
+        };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async context =>
+            {
+                string? userIdValue = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
+                string? sessionVersionValue = context.Principal?.FindFirstValue("session_version");
+
+                if (!Guid.TryParse(userIdValue, out Guid userId)
+                    || !int.TryParse(sessionVersionValue, out int tokenSessionVersion))
+                {
+                    context.Fail("Invalid token.");
+                    return;
+                }
+
+                AuthContext authContext = context.HttpContext.RequestServices.GetRequiredService<AuthContext>();
+                int? currentSessionVersion = await authContext.Users
+                    .Where(user => user.Id == userId)
+                    .Select(user => (int?)user.SessionVersion)
+                    .FirstOrDefaultAsync(context.HttpContext.RequestAborted)
+                    .ConfigureAwait(false);
+
+                if (currentSessionVersion is null || currentSessionVersion.Value != tokenSessionVersion)
+                {
+                    context.Fail("Token has been revoked.");
+                }
+            }
         };
     });
 
