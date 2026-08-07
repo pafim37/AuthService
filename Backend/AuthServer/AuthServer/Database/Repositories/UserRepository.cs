@@ -1,8 +1,10 @@
-﻿using AuthServer.Database.Models;
+using AuthServer.DependencyInjection;
+using AuthServer.Database.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace AuthServer.Database.Repositories
 {
+    [Component(typeof(IUserRepository))]
     public class UserRepository(AuthContext authContext) : IUserRepository
     {
         public async Task CreateUserAsync(UserEntity user, CancellationToken cancellationToken)

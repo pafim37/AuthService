@@ -1,3 +1,4 @@
+using AuthServer.DependencyInjection;
 using AuthServer.Database;
 using AuthServer.Database.Models;
 using Microsoft.EntityFrameworkCore;
@@ -6,6 +7,7 @@ using System.Text;
 
 namespace AuthServer.Authentication
 {
+    [Component(typeof(RefreshTokenService))]
     public class RefreshTokenService(AuthContext authContext, IConfiguration configuration)
     {
         public async Task<RefreshTokenResult> CreateRefreshTokenAsync(UserEntity user, CancellationToken cancellationToken)

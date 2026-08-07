@@ -1,5 +1,5 @@
+using AuthServer.DependencyInjection;
 using AuthServer.Database.Models;
-using AuthServer.DataTransferObjects;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -7,6 +7,7 @@ using System.Text;
 
 namespace AuthServer.Authentication
 {
+    [Component(typeof(JwtTokenService))]
     public class JwtTokenService(IConfiguration configuration)
     {
         public AccessTokenResult CreateAccessToken(UserEntity user)

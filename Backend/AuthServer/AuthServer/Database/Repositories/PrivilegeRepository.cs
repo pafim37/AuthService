@@ -1,8 +1,10 @@
-﻿using AuthServer.Database.Models;
+using AuthServer.DependencyInjection;
+using AuthServer.Database.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace AuthServer.Database.Repositories
 {
+    [Component(typeof(IPrivilegeRepository))]
     public class PrivilegeRepository(AuthContext authContext) : IPrivilegeRepository
     {
 

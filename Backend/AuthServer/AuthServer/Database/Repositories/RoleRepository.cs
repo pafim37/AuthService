@@ -1,8 +1,10 @@
+using AuthServer.DependencyInjection;
 using AuthServer.Database.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace AuthServer.Database.Repositories
 {
+    [Component(typeof(IRoleRepository))]
     public class RoleRepository(AuthContext authContext) : IRoleRepository
     {
         public async Task CreateRoleAsync(RoleEntity role, CancellationToken cancellationToken)

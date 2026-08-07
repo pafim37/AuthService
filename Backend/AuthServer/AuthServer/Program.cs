@@ -1,6 +1,5 @@
-using AuthServer.Authentication;
 using AuthServer.Database;
-using AuthServer.Database.Repositories;
+using AuthServer.DependencyInjection;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -23,16 +22,11 @@ if (string.IsNullOrWhiteSpace(signingKey))
 string issuer = jwtSettings["Issuer"] ?? throw new InvalidOperationException("JWT issuer is not configured.");
 string audience = jwtSettings["Audience"] ?? throw new InvalidOperationException("JWT audience is not configured.");
 
-builder.Services.AddDbContext<AuthContext>(options => 
+builder.Services.AddDbContext<AuthContext>(options =>
                 options.UseSqlServer(builder.Configuration["ConnectionStrings:Default"]),
                 ServiceLifetime.Scoped);
 
-// TODO: Change it to attribute
-builder.Services.AddScoped<IPrivilegeRepository, PrivilegeRepository>();
-builder.Services.AddScoped<IRoleRepository, RoleRepository>();
-builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<JwtTokenService>();
-builder.Services.AddScoped<RefreshTokenService>();
+builder.Services.AddComponentsFromAssemblyContaining<Program>();
 builder.Services.AddMediatR(configuration => configuration.RegisterServicesFromAssemblyContaining<Program>());
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
