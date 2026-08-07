@@ -41,4 +41,8 @@ export class AuthService {
     this.authToken.set(null);
     this.currentUser.set(null);
   }
+
+  get accessToken(): string | null {
+    return this.authToken()?.accessToken ?? null;
+  }
 }

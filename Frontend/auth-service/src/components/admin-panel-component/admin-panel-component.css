@@ -1,0 +1,66 @@
+.admin-panel {
+  position: relative;
+  min-height: calc(100vh - 64px);
+  padding: 24px;
+}
+
+.loading-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  min-height: 240px;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.tab-toolbar {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  padding: 20px 0 16px;
+}
+
+.table-shell {
+  overflow: auto;
+  border: 1px solid #d5d9df;
+  border-radius: 8px;
+  background: #fff;
+}
+
+table {
+  width: 100%;
+}
+
+th.mat-mdc-header-cell {
+  font-weight: 700;
+}
+
+.icon-cell {
+  width: 56px;
+  text-align: center;
+}
+
+mat-chip-set {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 0;
+}
+
+.dialog-form {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+@media (max-width: 720px) {
+  .admin-panel {
+    padding: 12px;
+  }
+
+  .tab-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

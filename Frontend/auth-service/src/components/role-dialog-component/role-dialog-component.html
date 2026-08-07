@@ -1,0 +1,23 @@
+<h2 mat-dialog-title>{{ data.role ? 'Edit role' : 'New role' }}</h2>
+<form [formGroup]="form" (ngSubmit)="save()">
+  <mat-dialog-content class="dialog-form">
+    <mat-form-field appearance="outline">
+      <mat-label>Name</mat-label>
+      <input matInput formControlName="name" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Privileges</mat-label>
+      <mat-select formControlName="privileges" multiple>
+        @for (privilege of data.privileges; track privilege.id) {
+          <mat-option [value]="privilege.name">{{ privilege.name }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button matButton type="button" mat-dialog-close>Cancel</button>
+    <button matButton="filled" type="submit" [disabled]="form.invalid">Save</button>
+  </mat-dialog-actions>
+</form>

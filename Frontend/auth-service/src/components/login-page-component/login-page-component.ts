@@ -11,6 +11,7 @@ import {
 } from '@angular/material/card';
 import { MatFormField, MatLabel } from '@angular/material/form-field';
 import { MatInput } from '@angular/material/input';
+import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth-service';
 import { Snackbar } from '../incorrect-credentials-snackbar/incorrect-credentials-snackbar';
 
@@ -39,6 +40,7 @@ type LoginFormGroup = FormGroup<{
 })
 export class LoginPageComponent {
   private readonly _authService = inject(AuthService);
+  private readonly _router = inject(Router);
   private readonly _snackBar = inject(Snackbar);
   protected readonly isSigningIn = signal(false);
 
@@ -78,6 +80,7 @@ export class LoginPageComponent {
     this._authService
       .login(username, password)
       .subscribe({
+        next: () => this._router.navigateByUrl('/admin'),
         error: () => {
           this.isSigningIn.set(false);
           this.showIncorrectCredentials();
