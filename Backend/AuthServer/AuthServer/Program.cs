@@ -12,6 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
+// TODO: Hide secrets from configuration files.
 IConfigurationSection jwtSettings = builder.Configuration.GetSection("Jwt");
 string? signingKey = jwtSettings["AuthServiceKey"];
 if (string.IsNullOrWhiteSpace(signingKey))
@@ -26,7 +27,7 @@ builder.Services.AddDbContext<AuthContext>(options =>
                 options.UseSqlServer(builder.Configuration["ConnectionStrings:Default"]),
                 ServiceLifetime.Scoped);
 
-
+// TODO: Change it to attribute
 builder.Services.AddScoped<IPrivilegeRepository, PrivilegeRepository>();
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
