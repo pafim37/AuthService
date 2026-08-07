@@ -33,6 +33,19 @@ namespace AuthServer.Controllers
             return Ok(ToDto(user));
         }
 
+        [HttpPost("create-admin")]
+        public async Task<IActionResult> CreateAdmin([FromBody] CredentialsDto newAdminDto, CancellationToken cancellationToken)
+        {
+            NewUserDto newAdmin = new()
+            {
+                Login = newAdminDto.Login,
+                Password = newAdminDto.Password,
+                Role = "administrator"
+            };
+
+            return await CreateNewUser(newAdmin, cancellationToken).ConfigureAwait(false);
+        }
+
         [HttpPost]
         public async Task<IActionResult> CreateNewUser([FromBody] NewUserDto newUserDto, CancellationToken cancellationToken)
         {
