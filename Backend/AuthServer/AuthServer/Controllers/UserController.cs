@@ -217,7 +217,8 @@ namespace AuthServer.Controllers
             return new PrivilegeDto
             {
                 Id = privilege.Id,
-                Name = privilege.Name
+                Name = privilege.Name,
+                Description = privilege.Description
             };
         }
     }

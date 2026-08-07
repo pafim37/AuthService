@@ -25,6 +25,7 @@ export class PrivilegeDialogComponent {
       nonNullable: true,
       validators: Validators.required,
     }),
+    description: new FormControl(this.data.privilege?.description ?? ''),
   });
 
   save(): void {

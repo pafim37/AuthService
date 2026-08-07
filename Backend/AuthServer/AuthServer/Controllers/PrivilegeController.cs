@@ -101,6 +101,11 @@ namespace AuthServer.Controllers
                 privilege.Name = privilegeDto.Name;
             }
 
+            if (!string.IsNullOrWhiteSpace(privilegeDto.Description))
+            {
+                privilege.Description = privilegeDto.Description;
+            }
+
             await privilegeRepository.UpdatePrivilegeAsync(privilege, cancellationToken).ConfigureAwait(false);
             return Ok(ToDto(privilege));
         }
@@ -128,7 +133,8 @@ namespace AuthServer.Controllers
             return new PrivilegeDto
             {
                 Id = privilege.Id,
-                Name = privilege.Name
+                Name = privilege.Name,
+                Description = privilege.Description
             };
         }
     }

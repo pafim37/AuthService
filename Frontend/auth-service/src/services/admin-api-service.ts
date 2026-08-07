@@ -4,6 +4,7 @@ import { Injectable, inject } from '@angular/core';
 export interface Privilege {
   id: string;
   name: string;
+  description: string | null;
 }
 
 export interface Role {
@@ -31,6 +32,7 @@ export interface RoleRequest {
 
 export interface PrivilegeRequest {
   name: string;
+  description: string | null;
 }
 
 @Injectable({
@@ -84,7 +86,7 @@ export class AdminApiService {
   }
 
   updatePrivilege(id: string, request: PrivilegeRequest) {
-    return this.httpClient.put<Privilege>(`/api/privileges/${id}`, request);
+    return this.httpClient.patch<Privilege>(`/api/privileges/${id}`, request);
   }
 
   deletePrivilege(id: string) {

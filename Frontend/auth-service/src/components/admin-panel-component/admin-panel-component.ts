@@ -11,6 +11,7 @@ import { forkJoin } from 'rxjs';
 import {
   AdminApiService,
   Privilege,
+  PrivilegeRequest,
   Role,
   RoleRequest,
   User,
@@ -44,7 +45,7 @@ export class AdminPanelComponent implements AfterViewInit {
 
   readonly userColumns = ['login', 'role', 'privileges', 'edit', 'remove'];
   readonly roleColumns = ['name', 'privileges', 'edit', 'remove'];
-  readonly privilegeColumns = ['name', 'edit', 'remove'];
+  readonly privilegeColumns = ['name', 'description', 'edit', 'remove'];
 
   readonly usersSource = new MatTableDataSource<User>([]);
   readonly rolesSource = new MatTableDataSource<Role>([]);
@@ -169,7 +170,7 @@ export class AdminPanelComponent implements AfterViewInit {
     this.dialog
       .open(PrivilegeDialogComponent, { data, width: '360px' })
       .afterClosed()
-      .subscribe((request?: { name: string }) => {
+      .subscribe((request?: PrivilegeRequest) => {
         if (!request) {
           return;
         }
