@@ -113,6 +113,34 @@ namespace AuthServer.Controllers
             });
         }
 
+        [HttpPost("admin-sign-in")]
+        public async Task<IActionResult> AdminSignIn([FromBody] SignInDto signInDto, CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(signInDto.Login) || string.IsNullOrWhiteSpace(signInDto.Password))
+            {
+                return BadRequest("Login and password are required.");
+            }
+
+            UserEntity? user = await userRepository.GetUserByLoginAsync(signInDto.Login, cancellationToken).ConfigureAwait(false);
+            if (user is null || string.IsNullOrWhiteSpace(user.PasswordHashed))
+            {
+                return Unauthorized("Invalid login or password.");
+            }
+
+            bool isPasswordValid = PasswordHasher.VerifyPassword(signInDto.Password, user.PasswordHashed);
+            if (!isPasswordValid)
+            {
+                return Unauthorized("Invalid login or password.");
+            }
+
+            if (user.Role!.Name != "administrator")
+            {
+                return Unauthorized("Only administrators can sign in with this endpoint.");
+            }
+
+            return Ok(await CreateTokenPairAsync(user, cancellationToken).ConfigureAwait(false));
+        }
+
         [HttpPost("logout")]
         [Authorize]
         public async Task<IActionResult> Logout([FromBody] RefreshTokenDto refreshTokenDto, CancellationToken cancellationToken)

@@ -29,7 +29,7 @@ export class AuthService {
       password,
     };
 
-    return this.httpClient.post<AuthToken>('/api/auth/sign-in', request).pipe(
+    return this.httpClient.post<AuthToken>('/api/auth/admin-sign-in', request).pipe(
       tap((authToken) => {
         this.authToken.set(authToken);
         this.currentUser.set(username);
