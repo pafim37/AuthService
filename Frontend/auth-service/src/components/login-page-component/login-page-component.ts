@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, effect, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButton } from '@angular/material/button';
 import {
@@ -40,6 +40,15 @@ type LoginFormGroup = FormGroup<{
 export class LoginPageComponent {
   private readonly _authService = inject(AuthService);
   private readonly _snackBar = inject(Snackbar);
+  protected readonly isSigningIn = signal(false);
+
+  constructor() {
+    effect(() => {
+      if (!this._authService.currentUser()) {
+        this.isSigningIn.set(false);
+      }
+    });
+  }
 
   readonly loginForm: LoginFormGroup = new FormGroup({
     username: new FormControl('', {
@@ -58,12 +67,22 @@ export class LoginPageComponent {
       return;
     }
 
-    const { username, password } = this.loginForm.getRawValue();
-    const isLoggedIn : Boolean = this._authService.login(username, password);
-
-    if (!isLoggedIn) {
-      this.showIncorrectCredentials();
+    if (this.isSigningIn()) {
+      return;
     }
+
+    const { username, password } = this.loginForm.getRawValue();
+    this.isSigningIn.set(true);
+    this.loginForm.reset();
+
+    this._authService
+      .login(username, password)
+      .subscribe({
+        error: () => {
+          this.isSigningIn.set(false);
+          this.showIncorrectCredentials();
+        },
+      });
   }
 
   private showIncorrectCredentials(): void {
