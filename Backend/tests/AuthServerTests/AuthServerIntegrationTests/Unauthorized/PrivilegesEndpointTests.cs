@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace AuthServerIntegrationTests.Unauthorized;
 
-[Collection(UnauthorizedTestCollection.Name)]
+[Collection(IntegrationTestCollection.Name)]
 public sealed class PrivilegesEndpointTests(DockerComposeFixture fixture)
 {
     [Fact]
