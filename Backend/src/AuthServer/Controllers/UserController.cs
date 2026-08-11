@@ -36,22 +36,20 @@ namespace AuthServer.Controllers
         [HttpPost("create-admin")]
         public async Task<IActionResult> CreateAdmin([FromBody] CredentialsDto newAdminDto, CancellationToken cancellationToken)
         {
-            NewUserDto newAdmin = new()
-            {
-                Login = newAdminDto.Login,
-                Password = newAdminDto.Password,
-                Role = "administrator"
-            };
-
-            return await CreateNewUser(newAdmin, cancellationToken).ConfigureAwait(false);
+            return await CreateNewUser(newAdminDto, "Administrator", cancellationToken).ConfigureAwait(false);
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateNewUser([FromBody] NewUserDto newUserDto, CancellationToken cancellationToken)
+        public async Task<IActionResult> CreateNewUser([FromBody] CredentialsDto newUserDto, CancellationToken cancellationToken)
         {
-            if (!ValidateNewUser(newUserDto))
+            return await CreateNewUser(newUserDto, "Default", cancellationToken).ConfigureAwait(false);
+        }
+
+        private async Task<IActionResult> CreateNewUser(CredentialsDto newUserDto, string roleName, CancellationToken cancellationToken)
+        {
+            if (!ValidateCredentials(newUserDto))
             {
-                return BadRequest("Invalid user data. Please provide valid login, password, and role.");
+                return BadRequest("Invalid user data. Please provide valid login and password.");
             }
 
             UserEntity? existingUser = await userRepository.GetUserByLoginAsync(newUserDto.Login!, cancellationToken).ConfigureAwait(false);
@@ -60,10 +58,10 @@ namespace AuthServer.Controllers
                 return Conflict($"User with login '{newUserDto.Login}' already exists.");
             }
 
-            RoleEntity? role = await roleRepository.GetRoleByNameAsync(newUserDto.Role!, cancellationToken).ConfigureAwait(false);
+            RoleEntity? role = await roleRepository.GetRoleByNameAsync(roleName, cancellationToken).ConfigureAwait(false);
             if (role is null)
             {
-                return BadRequest($"Role with name '{newUserDto.Role}' not found.");
+                return BadRequest($"Role with name '{roleName}' not found.");
             }
 
             UserEntity newUser = new()
@@ -80,11 +78,11 @@ namespace AuthServer.Controllers
         }
 
         [HttpPut("{id:guid}")]
-        public async Task<IActionResult> UpdateUser(Guid id, [FromBody] NewUserDto userDto, CancellationToken cancellationToken)
+        public async Task<IActionResult> UpdateUser(Guid id, [FromBody] CredentialsDto userDto, CancellationToken cancellationToken)
         {
-            if (!ValidateNewUser(userDto))
+            if (!ValidateCredentials(userDto))
             {
-                return BadRequest("Invalid user data. Please provide valid login, password, and role.");
+                return BadRequest("Invalid user data. Please provide valid login and password.");
             }
 
             UserEntity? user = await userRepository.GetUserByIdAsync(id, cancellationToken).ConfigureAwait(false);
@@ -93,17 +91,14 @@ namespace AuthServer.Controllers
                 return NotFound($"User with id '{id}' not found.");
             }
 
-            IActionResult? validationResult = await ValidateUserUpdate(id, userDto.Login!, userDto.Role!, cancellationToken).ConfigureAwait(false);
+            IActionResult? validationResult = await ValidateUserUpdate(id, userDto.Login!, cancellationToken).ConfigureAwait(false);
             if (validationResult is not null)
             {
                 return validationResult;
             }
 
-            RoleEntity role = (await roleRepository.GetRoleByNameAsync(userDto.Role!, cancellationToken).ConfigureAwait(false))!;
             user.Login = userDto.Login;
             user.PasswordHashed = PasswordHasher.HashPassword(userDto.Password!);
-            user.RoleId = role.Id;
-            user.Role = role;
 
             await userRepository.UpdateUserAsync(user, cancellationToken).ConfigureAwait(false);
             return Ok(ToDto(user));
@@ -168,7 +163,7 @@ namespace AuthServer.Controllers
             return NoContent();
         }
 
-        private async Task<IActionResult?> ValidateUserUpdate(Guid id, string login, string roleName, CancellationToken cancellationToken)
+        private async Task<IActionResult?> ValidateUserUpdate(Guid id, string login, CancellationToken cancellationToken)
         {
             UserEntity? userWithSameLogin = await userRepository.GetUserByLoginAsync(login, cancellationToken).ConfigureAwait(false);
             if (userWithSameLogin is not null && userWithSameLogin.Id != id)
@@ -176,20 +171,13 @@ namespace AuthServer.Controllers
                 return Conflict($"User with login '{login}' already exists.");
             }
 
-            RoleEntity? role = await roleRepository.GetRoleByNameAsync(roleName, cancellationToken).ConfigureAwait(false);
-            if (role is null)
-            {
-                return BadRequest($"Role with name '{roleName}' not found.");
-            }
-
             return null;
         }
 
-        private static bool ValidateNewUser(NewUserDto newUserDto)
+        private static bool ValidateCredentials(CredentialsDto newUserDto)
         {
             return !string.IsNullOrWhiteSpace(newUserDto.Login)
-                && !string.IsNullOrWhiteSpace(newUserDto.Password)
-                && !string.IsNullOrWhiteSpace(newUserDto.Role);
+                && !string.IsNullOrWhiteSpace(newUserDto.Password);
         }
 
         private static UserDto ToDto(UserEntity user)

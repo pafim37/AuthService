@@ -18,7 +18,7 @@ public sealed class EndpointReturnTests(DockerComposeFixture fixture)
     [Fact]
     public async Task AuthSignUp_ReturnsBadRequest_WhenPayloadIsInvalid()
     {
-        using HttpResponseMessage response = await fixture.Client.PostAsJsonAsync("/api/auth/sign-up", new { Login = "", Password = "", Role = "" });
+        using HttpResponseMessage response = await fixture.Client.PostAsJsonAsync("/api/auth/sign-up", new { Login = "", Password = "" });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -26,23 +26,15 @@ public sealed class EndpointReturnTests(DockerComposeFixture fixture)
     [Fact]
     public async Task AuthSignUp_ReturnsConflict_WhenLoginAlreadyExists()
     {
-        using HttpResponseMessage response = await fixture.Client.PostAsJsonAsync("/api/auth/sign-up", new { Login = "admin", Password = "admin", Role = "administrator" });
+        using HttpResponseMessage response = await fixture.Client.PostAsJsonAsync("/api/auth/sign-up", new { Login = "admin", Password = "admin" });
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
 
     [Fact]
-    public async Task AuthSignUp_ReturnsBadRequest_WhenRoleDoesNotExist()
-    {
-        using HttpResponseMessage response = await fixture.Client.PostAsJsonAsync("/api/auth/sign-up", new { Login = Unique("signup"), Password = "password", Role = Unique("missing-role") });
-
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-    }
-
-    [Fact]
     public async Task AuthSignUp_ReturnsCreated_WhenPayloadIsValid()
     {
-        using HttpResponseMessage response = await fixture.Client.PostAsJsonAsync("/api/auth/sign-up", new { Login = Unique("signup"), Password = "password", Role = "administrator" });
+        using HttpResponseMessage response = await fixture.Client.PostAsJsonAsync("/api/auth/sign-up", new { Login = Unique("signup"), Password = "password" });
 
         AuthTokenDto? tokens = await response.Content.ReadFromJsonAsync<AuthTokenDto>();
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -141,13 +133,9 @@ public sealed class EndpointReturnTests(DockerComposeFixture fixture)
     [Fact]
     public async Task AuthAdminSignIn_ReturnsUnauthorized_WhenUserIsNotAdministrator()
     {
-        string privilegeName = Unique("non-admin-privilege");
-        string roleName = Unique("non-admin-role");
         string login = Unique("non-admin-user");
 
-        await CreatePrivilegeAsync(privilegeName);
-        await CreateRoleAsync(roleName, privilegeName);
-        await fixture.Client.PostAsJsonAsync("/api/auth/sign-up", new { Login = login, Password = "password", Role = roleName });
+        await fixture.Client.PostAsJsonAsync("/api/auth/sign-up", new { Login = login, Password = "password" });
 
         using HttpResponseMessage response = await fixture.Client.PostAsJsonAsync("/api/auth/admin-sign-in", new { Login = login, Password = "password" });
 
@@ -349,34 +337,28 @@ public sealed class EndpointReturnTests(DockerComposeFixture fixture)
         using HttpResponseMessage createAdminResponse = await fixture.Client.PostAsJsonAsync("/api/users/create-admin", new { Login = Unique("created-admin"), Password = "password" });
         Assert.Equal(HttpStatusCode.Created, createAdminResponse.StatusCode);
 
-        using HttpResponseMessage invalidCreateResponse = await fixture.Client.PostAsJsonAsync("/api/users", new { Login = "", Password = "", Role = "" });
+        using HttpResponseMessage invalidCreateResponse = await fixture.Client.PostAsJsonAsync("/api/users", new { Login = "", Password = "" });
         Assert.Equal(HttpStatusCode.BadRequest, invalidCreateResponse.StatusCode);
 
-        UserDto user = await CreateUserAsync(userLogin, "administrator");
-        UserDto otherUser = await CreateUserAsync(otherUserLogin, "administrator");
+        UserDto user = await CreateUserAsync(userLogin);
+        UserDto otherUser = await CreateUserAsync(otherUserLogin);
 
-        using HttpResponseMessage duplicateCreateResponse = await fixture.Client.PostAsJsonAsync("/api/users", new { Login = userLogin, Password = "password", Role = "administrator" });
+        using HttpResponseMessage duplicateCreateResponse = await fixture.Client.PostAsJsonAsync("/api/users", new { Login = userLogin, Password = "password" });
         Assert.Equal(HttpStatusCode.Conflict, duplicateCreateResponse.StatusCode);
-
-        using HttpResponseMessage missingRoleCreateResponse = await fixture.Client.PostAsJsonAsync("/api/users", new { Login = Unique("missing-role-user"), Password = "password", Role = Unique("missing-role") });
-        Assert.Equal(HttpStatusCode.BadRequest, missingRoleCreateResponse.StatusCode);
 
         using HttpResponseMessage getResponse = await fixture.Client.GetAsync($"/api/users/{user.Id}");
         Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
 
-        using HttpResponseMessage invalidUpdateResponse = await fixture.Client.PutAsJsonAsync($"/api/users/{user.Id}", new { Login = "", Password = "", Role = "" });
+        using HttpResponseMessage invalidUpdateResponse = await fixture.Client.PutAsJsonAsync($"/api/users/{user.Id}", new { Login = "", Password = "" });
         Assert.Equal(HttpStatusCode.BadRequest, invalidUpdateResponse.StatusCode);
 
-        using HttpResponseMessage missingUpdateResponse = await fixture.Client.PutAsJsonAsync($"/api/users/{MissingId}", new { Login = Unique("missing-update"), Password = "password", Role = "administrator" });
+        using HttpResponseMessage missingUpdateResponse = await fixture.Client.PutAsJsonAsync($"/api/users/{MissingId}", new { Login = Unique("missing-update"), Password = "password" });
         Assert.Equal(HttpStatusCode.NotFound, missingUpdateResponse.StatusCode);
 
-        using HttpResponseMessage conflictUpdateResponse = await fixture.Client.PutAsJsonAsync($"/api/users/{user.Id}", new { Login = otherUser.Login, Password = "password", Role = "administrator" });
+        using HttpResponseMessage conflictUpdateResponse = await fixture.Client.PutAsJsonAsync($"/api/users/{user.Id}", new { Login = otherUser.Login, Password = "password" });
         Assert.Equal(HttpStatusCode.Conflict, conflictUpdateResponse.StatusCode);
 
-        using HttpResponseMessage missingRoleUpdateResponse = await fixture.Client.PutAsJsonAsync($"/api/users/{user.Id}", new { Login = updatedUserLogin, Password = "password", Role = Unique("missing-role") });
-        Assert.Equal(HttpStatusCode.BadRequest, missingRoleUpdateResponse.StatusCode);
-
-        using HttpResponseMessage updateResponse = await fixture.Client.PutAsJsonAsync($"/api/users/{user.Id}", new { Login = updatedUserLogin, Password = "password", Role = "administrator" });
+        using HttpResponseMessage updateResponse = await fixture.Client.PutAsJsonAsync($"/api/users/{user.Id}", new { Login = updatedUserLogin, Password = "password" });
         Assert.Equal(HttpStatusCode.OK, updateResponse.StatusCode);
 
         using HttpResponseMessage missingPatchResponse = await fixture.Client.PatchAsJsonAsync($"/api/users/{MissingId}", new { Login = Unique("missing-patch") });
@@ -388,7 +370,7 @@ public sealed class EndpointReturnTests(DockerComposeFixture fixture)
         using HttpResponseMessage missingRolePatchResponse = await fixture.Client.PatchAsJsonAsync($"/api/users/{user.Id}", new { Role = Unique("missing-role") });
         Assert.Equal(HttpStatusCode.BadRequest, missingRolePatchResponse.StatusCode);
 
-        using HttpResponseMessage patchResponse = await fixture.Client.PatchAsJsonAsync($"/api/users/{user.Id}", new { Login = Unique("user-patched"), Password = "new-password", Role = "administrator" });
+        using HttpResponseMessage patchResponse = await fixture.Client.PatchAsJsonAsync($"/api/users/{user.Id}", new { Login = Unique("user-patched"), Password = "new-password" });
         Assert.Equal(HttpStatusCode.OK, patchResponse.StatusCode);
 
         using HttpResponseMessage missingDeleteResponse = await fixture.Client.DeleteAsync($"/api/users/{MissingId}");
@@ -441,10 +423,10 @@ public sealed class EndpointReturnTests(DockerComposeFixture fixture)
         return (await response.Content.ReadFromJsonAsync<RoleDto>())!;
     }
 
-    private async Task<UserDto> CreateUserAsync(string login, string role)
+    private async Task<UserDto> CreateUserAsync(string login)
     {
         await AuthorizeAsAdminAsync();
-        using HttpResponseMessage response = await fixture.Client.PostAsJsonAsync("/api/users", new { Login = login, Password = "password", Role = role });
+        using HttpResponseMessage response = await fixture.Client.PostAsJsonAsync("/api/users", new { Login = login, Password = "password" });
         response.EnsureSuccessStatusCode();
         return (await response.Content.ReadFromJsonAsync<UserDto>())!;
     }

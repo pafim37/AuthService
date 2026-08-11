@@ -4,12 +4,10 @@ import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
-import { Role, User } from '../../services/admin-api-service';
+import { User } from '../../services/admin-api-service';
 
 export type UserDialogData = {
   mode: 'create' | 'create-admin' | 'edit';
-  roles: Role[];
   user?: User;
 };
 
@@ -20,7 +18,6 @@ export type UserDialogData = {
     MatDialogModule,
     MatFormFieldModule,
     MatInputModule,
-    MatSelectModule,
     ReactiveFormsModule,
   ],
   templateUrl: './user-dialog-component.html',
@@ -45,10 +42,6 @@ export class UserDialogComponent {
       nonNullable: true,
       validators: Validators.required,
     }),
-    role: new FormControl(this.data.user?.role?.name ?? this.data.roles[0]?.name ?? 'administrator', {
-      nonNullable: true,
-      validators: Validators.required,
-    }),
   });
 
   save(): void {
@@ -60,7 +53,6 @@ export class UserDialogComponent {
     this.dialogRef.close({
       login: request.login,
       password: request.password,
-      role: this.data.mode === 'create-admin' ? 'administrator' : request.role,
     });
   }
 }

@@ -19,30 +19,30 @@ namespace AuthServer.Controllers
     {
         [HttpPost("sign-up")]
         [AllowAnonymous]
-        public async Task<IActionResult> SignUp([FromBody] NewUserDto signUpDto, CancellationToken cancellationToken)
+        public async Task<IActionResult> SignUp([FromBody] CredentialsDto credetialsDto, CancellationToken cancellationToken)
         {
-            if (!ValidateSignUp(signUpDto))
+            if (!ValidateCredentials(credetialsDto))
             {
-                return BadRequest("Invalid user data. Please provide valid login, password, and role.");
+                return BadRequest("Invalid user data. Please provide valid login and password.");
             }
 
-            UserEntity? existingUser = await userRepository.GetUserByLoginAsync(signUpDto.Login!, cancellationToken).ConfigureAwait(false);
+            UserEntity? existingUser = await userRepository.GetUserByLoginAsync(credetialsDto.Login!, cancellationToken).ConfigureAwait(false);
             if (existingUser is not null)
             {
-                return Conflict($"User with login '{signUpDto.Login}' already exists.");
+                return Conflict($"User with login '{credetialsDto.Login}' already exists.");
             }
 
-            RoleEntity? role = await roleRepository.GetRoleByNameAsync(signUpDto.Role!, cancellationToken).ConfigureAwait(false);
+            RoleEntity? role = await roleRepository.GetRoleByNameAsync("Default", cancellationToken).ConfigureAwait(false);
             if (role is null)
             {
-                return BadRequest($"Role with name '{signUpDto.Role}' not found.");
+                return BadRequest($"Role with name 'Default' not found.");
             }
 
             UserEntity user = new()
             {
                 Id = Guid.NewGuid(),
-                Login = signUpDto.Login,
-                PasswordHashed = PasswordHasher.HashPassword(signUpDto.Password!),
+                Login = credetialsDto.Login,
+                PasswordHashed = PasswordHasher.HashPassword(credetialsDto.Password!),
                 RoleId = role.Id,
                 Role = role
             };
@@ -133,7 +133,7 @@ namespace AuthServer.Controllers
                 return Unauthorized("Invalid login or password.");
             }
 
-            if (user.Role!.Name != "administrator")
+            if (!string.Equals(user.Role!.Name, "Administrator", StringComparison.OrdinalIgnoreCase))
             {
                 return Unauthorized("Only administrators can sign in with this endpoint.");
             }
@@ -191,11 +191,10 @@ namespace AuthServer.Controllers
             };
         }
 
-        private static bool ValidateSignUp(NewUserDto signUpDto)
+        private static bool ValidateCredentials(CredentialsDto credetialsDto)
         {
-            return !string.IsNullOrWhiteSpace(signUpDto.Login)
-                && !string.IsNullOrWhiteSpace(signUpDto.Password)
-                && !string.IsNullOrWhiteSpace(signUpDto.Role);
+            return !string.IsNullOrWhiteSpace(credetialsDto.Login)
+                && !string.IsNullOrWhiteSpace(credetialsDto.Password);
         }
     }
 }
