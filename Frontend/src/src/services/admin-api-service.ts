@@ -24,6 +24,11 @@ export interface UserRequest {
   password: string;
 }
 
+export interface UserUpdateRequest {
+  login: string;
+  role: string;
+}
+
 export interface RoleRequest {
   name: string;
   privileges: string[];
@@ -52,8 +57,8 @@ export class AdminApiService {
     return this.httpClient.post<User>('/api/users/create-admin', { login, password });
   }
 
-  updateUser(id: string, request: UserRequest) {
-    return this.httpClient.put<User>(`/api/users/${id}`, request);
+  updateUser(id: string, request: UserUpdateRequest) {
+    return this.httpClient.patch<User>(`/api/users/${id}`, request);
   }
 
   deleteUser(id: string) {

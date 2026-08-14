@@ -15,7 +15,8 @@ namespace AuthServer.Controllers
         IUserRepository userRepository,
         IRoleRepository roleRepository,
         JwtTokenService jwtTokenService,
-        RefreshTokenService refreshTokenService) : ControllerBase
+        RefreshTokenService refreshTokenService,
+        IWebHostEnvironment webHostEnvironment) : ControllerBase
     {
         [HttpPost("sign-up")]
         [AllowAnonymous]
@@ -49,6 +50,7 @@ namespace AuthServer.Controllers
 
             await userRepository.CreateUserAsync(user, cancellationToken).ConfigureAwait(false);
             AuthTokenDto tokens = await CreateTokenPairAsync(user, cancellationToken).ConfigureAwait(false);
+            AppendAuthenticationCookies(tokens);
             return Created(string.Empty, tokens);
         }
 
@@ -73,20 +75,23 @@ namespace AuthServer.Controllers
                 return Unauthorized("Invalid login or password.");
             }
 
-            return Ok(await CreateTokenPairAsync(user, cancellationToken).ConfigureAwait(false));
+            AuthTokenDto tokens = await CreateTokenPairAsync(user, cancellationToken).ConfigureAwait(false);
+            AppendAuthenticationCookies(tokens);
+            return Ok(tokens);
         }
 
         [HttpPost("refresh")]
         [AllowAnonymous]
-        public async Task<IActionResult> Refresh([FromBody] RefreshTokenDto refreshTokenDto, CancellationToken cancellationToken)
+        public async Task<IActionResult> Refresh([FromBody] RefreshTokenDto? refreshTokenDto, CancellationToken cancellationToken)
         {
-            if (string.IsNullOrWhiteSpace(refreshTokenDto.RefreshToken))
+            string? refreshTokenValue = GetRefreshToken(refreshTokenDto);
+            if (string.IsNullOrWhiteSpace(refreshTokenValue))
             {
                 return BadRequest("Refresh token is required.");
             }
 
             RefreshTokenEntity? storedRefreshToken = await refreshTokenService
-                .GetActiveRefreshTokenAsync(refreshTokenDto.RefreshToken, cancellationToken)
+                .GetActiveRefreshTokenAsync(refreshTokenValue, cancellationToken)
                 .ConfigureAwait(false);
 
             if (storedRefreshToken?.User is null)
@@ -104,13 +109,16 @@ namespace AuthServer.Controllers
                 .ConfigureAwait(false);
 
             AccessTokenResult accessToken = jwtTokenService.CreateAccessToken(user);
-            return Ok(new AuthTokenDto
+            AuthTokenDto tokens = new()
             {
                 AccessToken = accessToken.Token,
                 RefreshToken = newRefreshToken.Token,
                 ExpiresAtUtc = accessToken.ExpiresAtUtc,
                 RefreshTokenExpiresAtUtc = newRefreshToken.Entity.ExpiresAtUtc
-            });
+            };
+
+            AppendAuthenticationCookies(tokens);
+            return Ok(tokens);
         }
 
         [HttpPost("admin-sign-in")]
@@ -139,20 +147,37 @@ namespace AuthServer.Controllers
                 return StatusCode(StatusCodes.Status403Forbidden, "Access denied. User does not have administrator privileges.");
             }
 
-            return Ok(await CreateTokenPairAsync(user, cancellationToken).ConfigureAwait(false));
+            AuthTokenDto tokens = await CreateTokenPairAsync(user, cancellationToken).ConfigureAwait(false);
+            AppendAuthenticationCookies(tokens);
+            return Ok(tokens);
+        }
+
+        [HttpGet("me")]
+        [Authorize]
+        public IActionResult Me()
+        {
+            string? login = User.FindFirstValue(ClaimTypes.Name);
+            if (string.IsNullOrWhiteSpace(login))
+            {
+                return Unauthorized("Invalid user.");
+            }
+
+            return Ok(new { Login = login });
         }
 
         [HttpPost("logout")]
         [Authorize]
-        public async Task<IActionResult> Logout([FromBody] RefreshTokenDto refreshTokenDto, CancellationToken cancellationToken)
+        public async Task<IActionResult> Logout([FromBody] RefreshTokenDto? refreshTokenDto, CancellationToken cancellationToken)
         {
-            if (string.IsNullOrWhiteSpace(refreshTokenDto.RefreshToken))
+            string? refreshTokenValue = GetRefreshToken(refreshTokenDto);
+            if (string.IsNullOrWhiteSpace(refreshTokenValue))
             {
+                DeleteAuthenticationCookies();
                 return BadRequest("Refresh token is required.");
             }
 
             RefreshTokenEntity? storedRefreshToken = await refreshTokenService
-                .GetActiveRefreshTokenAsync(refreshTokenDto.RefreshToken, cancellationToken)
+                .GetActiveRefreshTokenAsync(refreshTokenValue, cancellationToken)
                 .ConfigureAwait(false);
 
             if (storedRefreshToken is not null)
@@ -171,7 +196,8 @@ namespace AuthServer.Controllers
                 }
             }
 
-            return Ok("Logout successful. Remove the access token from the client storage.");
+            DeleteAuthenticationCookies();
+            return Ok("Logout successful.");
         }
 
         private async Task<AuthTokenDto> CreateTokenPairAsync(UserEntity user, CancellationToken cancellationToken)
@@ -196,6 +222,64 @@ namespace AuthServer.Controllers
         {
             return !string.IsNullOrWhiteSpace(credetialsDto.Login)
                 && !string.IsNullOrWhiteSpace(credetialsDto.Password);
+        }
+
+        private string? GetRefreshToken(RefreshTokenDto? refreshTokenDto)
+        {
+            if (!string.IsNullOrWhiteSpace(refreshTokenDto?.RefreshToken))
+            {
+                return refreshTokenDto.RefreshToken;
+            }
+
+            return Request.Cookies.TryGetValue(AuthenticationCookieNames.RefreshToken, out string? refreshToken)
+                ? refreshToken
+                : null;
+        }
+
+        private void AppendAuthenticationCookies(AuthTokenDto tokens)
+        {
+            Response.Cookies.Append(
+                AuthenticationCookieNames.AccessToken,
+                tokens.AccessToken,
+                CreateCookieOptions(tokens.ExpiresAtUtc));
+
+            Response.Cookies.Append(
+                AuthenticationCookieNames.RefreshToken,
+                tokens.RefreshToken,
+                CreateCookieOptions(tokens.RefreshTokenExpiresAtUtc));
+        }
+
+        private void DeleteAuthenticationCookies()
+        {
+            Response.Cookies.Delete(AuthenticationCookieNames.AccessToken, CreateDeleteCookieOptions());
+            Response.Cookies.Delete(AuthenticationCookieNames.RefreshToken, CreateDeleteCookieOptions());
+        }
+
+        private CookieOptions CreateCookieOptions(DateTime expiresAtUtc)
+        {
+            return new()
+            {
+                HttpOnly = true,
+                Secure = ShouldUseSecureCookies(),
+                SameSite = SameSiteMode.Strict,
+                Expires = new DateTimeOffset(expiresAtUtc),
+                Path = "/"
+            };
+        }
+
+        private CookieOptions CreateDeleteCookieOptions()
+        {
+            return new()
+            {
+                Secure = ShouldUseSecureCookies(),
+                SameSite = SameSiteMode.Strict,
+                Path = "/"
+            };
+        }
+
+        private bool ShouldUseSecureCookies()
+        {
+            return !webHostEnvironment.IsDevelopment() || Request.IsHttps;
         }
     }
 }

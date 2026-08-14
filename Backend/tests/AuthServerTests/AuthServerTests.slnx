@@ -1,3 +1,5 @@
 <Solution>
+  <Project Path="../../src/AuthServer/AuthServer.csproj" />
   <Project Path="AuthServerIntegrationTests/AuthServerIntegrationTests.csproj" />
+  <Project Path="AuthServerUnitTests/AuthServerUnitTests.csproj" Id="bb0a9011-faa2-4298-a284-834623d90466" />
 </Solution>

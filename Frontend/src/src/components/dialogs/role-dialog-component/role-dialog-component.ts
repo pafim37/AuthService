@@ -5,7 +5,7 @@ import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/materia
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { Privilege, Role } from '../../services/admin-api-service';
+import { Privilege, Role } from '../../../services/admin-api-service';
 
 export type RoleDialogData = {
   privileges: Privilege[];

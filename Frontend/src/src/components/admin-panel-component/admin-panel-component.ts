@@ -16,12 +16,14 @@ import {
   RoleRequest,
   User,
   UserRequest,
+  UserUpdateRequest,
 } from '../../services/admin-api-service';
-import { ConfirmDialogComponent } from '../confirm-dialog-component/confirm-dialog-component';
-import { Snackbar } from '../incorrect-credentials-snackbar/incorrect-credentials-snackbar';
-import { PrivilegeDialogComponent, PrivilegeDialogData } from '../privilege-dialog-component/privilege-dialog-component';
-import { RoleDialogComponent, RoleDialogData } from '../role-dialog-component/role-dialog-component';
-import { UserDialogComponent, UserDialogData } from '../user-dialog-component/user-dialog-component';
+import { ConfirmDialogComponent } from '../dialogs/confirm-dialog-component/confirm-dialog-component';
+import { Snackbar } from '../snackbar/snackbar';
+import { PrivilegeDialogComponent, PrivilegeDialogData } from '../dialogs/privilege-dialog-component/privilege-dialog-component';
+import { RoleDialogComponent, RoleDialogData } from '../dialogs/role-dialog-component/role-dialog-component';
+import { UserDialogComponent, UserDialogData } from '../dialogs/user-dialog-component/user-dialog-component';
+import { MatTooltip } from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-admin-panel-component',
@@ -34,10 +36,12 @@ import { UserDialogComponent, UserDialogData } from '../user-dialog-component/us
     MatProgressSpinnerModule,
     MatTabsModule,
     MatTableModule,
+    MatTooltip
   ],
   templateUrl: './admin-panel-component.html',
   styleUrl: './admin-panel-component.css',
 })
+
 export class AdminPanelComponent implements AfterViewInit {
   private readonly adminApiService = inject(AdminApiService);
   private readonly dialog = inject(MatDialog);
@@ -64,15 +68,15 @@ export class AdminPanelComponent implements AfterViewInit {
   }
 
   openCreateUser(): void {
-    this.openUserDialog({ mode: 'create' });
+    this.openUserDialog({ mode: 'create', roles: this.rolesSource.data });
   }
 
   openCreateAdmin(): void {
-    this.openUserDialog({ mode: 'create-admin' });
+    this.openUserDialog({ mode: 'create-admin', roles: this.rolesSource.data });
   }
 
   openEditUser(user: User): void {
-    this.openUserDialog({ mode: 'edit', user });
+    this.openUserDialog({ mode: 'edit', roles: this.rolesSource.data, user });
   }
 
   openCreateRole(): void {
@@ -127,17 +131,17 @@ export class AdminPanelComponent implements AfterViewInit {
     this.dialog
       .open(UserDialogComponent, { data, width: '440px' })
       .afterClosed()
-      .subscribe((request?: UserRequest) => {
+      .subscribe((request?: UserRequest | UserUpdateRequest) => {
         if (!request) {
           return;
         }
 
         const action =
-          data.mode === 'create-admin'
-            ? this.adminApiService.createAdmin(request.login, request.password)
-            : data.mode === 'edit' && data.user
-              ? this.adminApiService.updateUser(data.user.id, request)
-              : this.adminApiService.createUser(request);
+          data.mode === 'edit' && data.user
+            ? this.adminApiService.updateUser(data.user.id, request as UserUpdateRequest)
+            : data.mode === 'create-admin'
+              ? this.adminApiService.createAdmin(request.login, (request as UserRequest).password)
+              : this.adminApiService.createUser(request as UserRequest);
 
         action.subscribe({
           next: () => this.loadData(),

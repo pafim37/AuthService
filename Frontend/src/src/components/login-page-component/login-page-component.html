@@ -9,7 +9,7 @@
       <mat-card-content>
         <mat-form-field appearance="outline">
           <mat-label>Login</mat-label>
-          <input matInput type="text" formControlName="username" autocomplete="username" />
+          <input matInput type="text" formControlName="login" autocomplete="username" />
         </mat-form-field>
 
         <mat-form-field appearance="outline">
@@ -24,7 +24,7 @@
       </mat-card-content>
 
       <mat-card-actions>
-        <button matButton="filled" color="primary" type="submit" [disabled]="isSigningIn()">Sign In</button>
+        <button matButton="filled" color="primary" type="submit">Sign In</button>
       </mat-card-actions>
     </mat-card>
   </form>

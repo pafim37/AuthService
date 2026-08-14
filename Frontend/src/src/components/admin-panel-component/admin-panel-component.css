@@ -1,6 +1,6 @@
 .admin-panel {
   position: relative;
-  min-height: calc(100vh - 64px);
+  min-height: 100%;
   padding: 24px;
 }
 
@@ -11,7 +11,7 @@
   display: grid;
   min-height: 240px;
   place-items: center;
-  background: rgba(255, 255, 255, 0.72);
+  background: color-mix(in srgb, var(--mat-sys-surface) 72%, transparent);
 }
 
 .tab-toolbar {
@@ -23,9 +23,9 @@
 
 .table-shell {
   overflow: auto;
-  border: 1px solid #d5d9df;
+  border: 1px solid var(--mat-sys-outline-variant);
   border-radius: 8px;
-  background: #fff;
+  background: var(--mat-sys-surface);
 }
 
 table {

@@ -13,10 +13,11 @@ import { MatFormField, MatLabel } from '@angular/material/form-field';
 import { MatInput } from '@angular/material/input';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth-service';
-import { Snackbar } from '../incorrect-credentials-snackbar/incorrect-credentials-snackbar';
+import { Snackbar } from '../snackbar/snackbar';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 type LoginFormGroup = FormGroup<{
-  username: FormControl<string>;
+  login: FormControl<string>;
   password: FormControl<string>;
 }>;
 
@@ -33,6 +34,7 @@ type LoginFormGroup = FormGroup<{
     MatFormField,
     MatInput,
     MatLabel,
+    MatProgressSpinnerModule,
     ReactiveFormsModule,
   ],
   templateUrl: './login-page-component.html',
@@ -42,18 +44,9 @@ export class LoginPageComponent {
   private readonly _authService = inject(AuthService);
   private readonly _router = inject(Router);
   private readonly _snackBar = inject(Snackbar);
-  protected readonly isSigningIn = signal(false);
-
-  constructor() {
-    effect(() => {
-      if (!this._authService.currentUser()) {
-        this.isSigningIn.set(false);
-      }
-    });
-  }
 
   readonly loginForm: LoginFormGroup = new FormGroup({
-    username: new FormControl('', {
+    login: new FormControl('', {
       nonNullable: true,
       validators: Validators.required,
     }),
@@ -65,30 +58,27 @@ export class LoginPageComponent {
 
   signIn(): void {
     if (this.loginForm.invalid) {
-      this.showIncorrectCredentials();
+      this._snackBar.openSnackBar('Login and password are required!');
       return;
     }
 
-    if (this.isSigningIn()) {
-      return;
-    }
-
-    const { username, password } = this.loginForm.getRawValue();
-    this.isSigningIn.set(true);
-    this.loginForm.reset();
+    const { login, password } = this.loginForm.getRawValue();
+    this.loginForm.disabled;
 
     this._authService
-      .login(username, password)
+      .signin(login, password)
       .subscribe({
-        next: () => this._router.navigateByUrl('/admin'),
-        error: () => {
-          this.isSigningIn.set(false);
-          this.showIncorrectCredentials();
+        next: () => {
+          this._router.navigateByUrl('/dashboard');
+        },
+        error: (e) => {
+          if (e.status !== 403) {
+            this._snackBar.openSnackBar('Incorrect credential!');
+          }
+          else {
+            this._snackBar.openSnackBar('No sufficient permission!');
+          }
         },
       });
-  }
-
-  private showIncorrectCredentials(): void {
-    this._snackBar.openSnackBar('Incorrect credential');
   }
 }

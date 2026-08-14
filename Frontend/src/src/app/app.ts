@@ -8,6 +8,5 @@ import { AppHeaderComponent } from '../components/app-header-component/app-heade
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
-export class App {
-  protected readonly title = signal('auth-service');
-}
+
+export class App {}

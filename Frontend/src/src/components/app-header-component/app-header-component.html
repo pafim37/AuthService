@@ -4,10 +4,23 @@
     <span>Administrator Panel</span>
   </div>
 
-  @if (currentUser(); as user) {
-    <div class="user-actions">
-      <span>Hello {{ user }}!</span>
-      <button matButton="outlined" type="button" (click)="logout()">Logout</button>
-    </div>
-  }
+  <div class="header-actions">
+    @if (currentUser(); as user) {
+      <div class="user-actions">
+        <span>Hello {{ user }}!</span>
+        <button matButton="outlined" type="button" (click)="logout()">Logout</button>
+      </div>
+      <span class="actions-separator" aria-hidden="true"></span>
+    }
+
+    <mat-slide-toggle
+      [checked]="isDarkTheme()"
+      aria-label="Toggle dark mode"
+      (change)="toggleTheme($event)"
+    >
+      <div class="theme-label">
+        {{ isDarkTheme() ? 'Dark' : 'Light' }}
+      </div>
+    </mat-slide-toggle>
+  </div>
 </header>
