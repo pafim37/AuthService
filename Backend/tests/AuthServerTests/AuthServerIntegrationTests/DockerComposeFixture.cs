@@ -4,13 +4,12 @@ using System.IO;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Xunit;
-
 namespace AuthServerIntegrationTests;
 
 public sealed class DockerComposeFixture : IAsyncLifetime
 {
     private const string ComposeProjectName = "auth-service-integration-tests";
+    private const string DockerFilename = "docker-compose.backend.integration.yml";
     private static readonly TimeSpan ApiStartupTimeout = TimeSpan.FromMinutes(5);
     private static readonly Uri ApiBaseAddress = new("http://localhost:5124");
 
@@ -19,7 +18,7 @@ public sealed class DockerComposeFixture : IAsyncLifetime
 
     public DockerComposeFixture()
     {
-        composeFilePath = Path.Combine(repoRoot, ".docker", "docker-compose.yml");
+        composeFilePath = Path.Combine(repoRoot, ".docker", DockerFilename);
     }
 
     public HttpClient Client { get; private set; } = new()
@@ -30,15 +29,21 @@ public sealed class DockerComposeFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        await RunDockerComposeAsync("down", "--volumes", "--remove-orphans");
-        await RunDockerComposeAsync("up", "-d", "--build", "backend");
+        if (TestConfig.RunInDocker)
+        {
+            await RunDockerComposeAsync("down", "--volumes", "--remove-orphans");
+            await RunDockerComposeAsync("up", "-d", "--build", "backend");
+        }
         await WaitForApiAsync();
     }
 
     public async Task DisposeAsync()
     {
         Client.Dispose();
-        await RunDockerComposeAsync("down", "--volumes", "--remove-orphans");
+        if (TestConfig.RunInDocker)
+        {
+            await RunDockerComposeAsync("down", "--volumes", "--remove-orphans");
+        }
     }
 
     private async Task WaitForApiAsync()
@@ -98,7 +103,7 @@ public sealed class DockerComposeFixture : IAsyncLifetime
 
         while (directory is not null)
         {
-            if (File.Exists(Path.Combine(directory.FullName, ".docker", "docker-compose.yml")))
+            if (File.Exists(Path.Combine(directory.FullName, ".docker", DockerFilename)))
             {
                 return directory.FullName;
             }
@@ -106,6 +111,6 @@ public sealed class DockerComposeFixture : IAsyncLifetime
             directory = directory.Parent;
         }
 
-        throw new DirectoryNotFoundException("Could not find repository root containing .docker/docker-compose.yml.");
+        throw new DirectoryNotFoundException($"Could not find repository root containing .docker/{DockerFilename}.");
     }
 }

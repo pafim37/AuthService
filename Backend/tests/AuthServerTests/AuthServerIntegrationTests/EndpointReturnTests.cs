@@ -131,7 +131,7 @@ public sealed class EndpointReturnTests(DockerComposeFixture fixture)
     }
 
     [Fact]
-    public async Task AuthAdminSignIn_ReturnsUnauthorized_WhenUserIsNotAdministrator()
+    public async Task AuthAdminSignIn_ReturnsForbidden_WhenUserIsNotAdministrator()
     {
         string login = Unique("non-admin-user");
 
@@ -139,7 +139,7 @@ public sealed class EndpointReturnTests(DockerComposeFixture fixture)
 
         using HttpResponseMessage response = await fixture.Client.PostAsJsonAsync("/api/auth/admin-sign-in", new { Login = login, Password = "password" });
 
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Fact]
@@ -309,7 +309,7 @@ public sealed class EndpointReturnTests(DockerComposeFixture fixture)
         using HttpResponseMessage missingDeleteResponse = await fixture.Client.DeleteAsync($"/api/roles/{MissingId}");
         Assert.Equal(HttpStatusCode.NotFound, missingDeleteResponse.StatusCode);
 
-        RoleDto administratorRole = await GetRoleByNameAsync("administrator");
+        RoleDto administratorRole = await GetRoleByNameAsync("Administrator");
         using HttpResponseMessage protectedDeleteResponse = await fixture.Client.DeleteAsync($"/api/roles/{administratorRole.Id}");
         Assert.Equal(HttpStatusCode.Conflict, protectedDeleteResponse.StatusCode);
 

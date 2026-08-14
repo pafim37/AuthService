@@ -135,7 +135,8 @@ namespace AuthServer.Controllers
 
             if (!string.Equals(user.Role!.Name, "Administrator", StringComparison.OrdinalIgnoreCase))
             {
-                return Unauthorized("Only administrators can sign in with this endpoint.");
+                
+                return StatusCode(StatusCodes.Status403Forbidden, "Access denied. User does not have administrator privileges.");
             }
 
             return Ok(await CreateTokenPairAsync(user, cancellationToken).ConfigureAwait(false));
