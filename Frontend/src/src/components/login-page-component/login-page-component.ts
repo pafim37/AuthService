@@ -68,7 +68,7 @@ export class LoginPageComponent {
 
   signIn(): void {
     if (this.loginForm.invalid) {
-      this.showIncorrectCredentials();
+      this._snackBar.openSnackBar('Incorrect values in form');
       return;
     }
 
@@ -84,18 +84,19 @@ export class LoginPageComponent {
       .login(username, password)
       .subscribe({
         next: () => {
-          this.isLoadingAdminPanel.set(true),
-          this._router.navigateByUrl('/admin')
+          this.isLoadingAdminPanel.set(true);
+          this._router.navigateByUrl('/admin');
         },
-        error: () => {
+        error: (e) => {
           this.isLoadingAdminPanel.set(false);
           this.isSigningIn.set(false);
-          this.showIncorrectCredentials();
+          if (e.status !== 403) {
+            this._snackBar.openSnackBar('Incorrect credential!');
+          }
+          else {
+            this._snackBar.openSnackBar('No sufficient permission!');
+          }
         },
       });
-  }
-
-  private showIncorrectCredentials(): void {
-    this._snackBar.openSnackBar('Incorrect credential');
   }
 }

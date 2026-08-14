@@ -6,10 +6,23 @@
       <input matInput formControlName="login" autocomplete="username" />
     </mat-form-field>
 
-    <mat-form-field appearance="outline">
-      <mat-label>Password</mat-label>
-      <input matInput type="password" formControlName="password" autocomplete="new-password" />
-    </mat-form-field>
+    @if (data.mode !== 'edit') {
+      <mat-form-field appearance="outline">
+        <mat-label>Password</mat-label>
+        <input matInput type="password" formControlName="password" autocomplete="new-password" />
+      </mat-form-field>
+    }
+
+    @if (data.mode === 'edit') {
+      <mat-form-field appearance="outline">
+        <mat-label>Role</mat-label>
+        <mat-select formControlName="role">
+          @for (role of data.roles; track role.id) {
+            <mat-option [value]="role.name">{{ role.name }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    }
   </mat-dialog-content>
 
   <mat-dialog-actions align="end">
