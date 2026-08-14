@@ -1,5 +1,6 @@
 using AuthServer.Database;
 using AuthServer.DependencyInjection;
+using AuthServer.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -46,6 +47,16 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
         options.Events = new JwtBearerEvents
         {
+            OnMessageReceived = context =>
+            {
+                if (string.IsNullOrWhiteSpace(context.Token)
+                    && context.Request.Cookies.TryGetValue(AuthenticationCookieNames.AccessToken, out string? accessToken))
+                {
+                    context.Token = accessToken;
+                }
+
+                return Task.CompletedTask;
+            },
             OnTokenValidated = async context =>
             {
                 string? userIdValue = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);

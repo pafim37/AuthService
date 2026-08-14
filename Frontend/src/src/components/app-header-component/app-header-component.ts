@@ -16,7 +16,8 @@ export class AppHeaderComponent {
   public readonly currentUser = this.authService.currentUser;
 
   public logout(): void {
-    this.authService.logout();
-    this.router.navigateByUrl('/login');
+    this.authService.logout().subscribe(() => {
+      this.router.navigateByUrl('/login');
+    });
   }
 }

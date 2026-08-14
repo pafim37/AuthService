@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, signal } from '@angular/core';
-import { Observable, tap } from 'rxjs';
+import { catchError, map, Observable, of, tap } from 'rxjs';
 
 interface SignInRequest {
   login: string;
@@ -14,12 +14,15 @@ export interface AuthToken {
   refreshTokenExpiresAtUtc: string;
 }
 
+interface CurrentUser {
+  login: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
 export class AuthService {
   readonly currentUser = signal<string | null>(null);
-  readonly authToken = signal<AuthToken | null>(null);
 
   constructor(private readonly httpClient: HttpClient) {}
 
@@ -29,20 +32,28 @@ export class AuthService {
       password,
     };
 
-    return this.httpClient.post<AuthToken>('/api/auth/admin-sign-in', request).pipe(
-      tap((authToken) => {
-        this.authToken.set(authToken);
+    return this.httpClient.post<AuthToken>('/api/auth/admin-sign-in', request, { withCredentials: true }).pipe(
+      tap(() => {
         this.currentUser.set(username);
       }),
     );
   }
 
-  logout(): void {
-    this.authToken.set(null);
-    this.currentUser.set(null);
+  loadCurrentUser(): Observable<string | null> {
+    return this.httpClient.get<CurrentUser>('/api/auth/me', { withCredentials: true }).pipe(
+      map((user) => user.login),
+      tap((login) => this.currentUser.set(login)),
+      catchError(() => {
+        this.currentUser.set(null);
+        return of(null); // TODO: verify if of is not deprecated 
+      }),
+    );
   }
 
-  get accessToken(): string | null {
-    return this.authToken()?.accessToken ?? null;
+  logout(): Observable<void> {
+    return this.httpClient.post<void>('/api/auth/logout', {}, { withCredentials: true }).pipe(
+      catchError(() => of(undefined)),
+      tap(() => this.currentUser.set(null)),
+    );
   }
 }
