@@ -14,6 +14,7 @@ import { MatInput } from '@angular/material/input';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth-service';
 import { Snackbar } from '../incorrect-credentials-snackbar/incorrect-credentials-snackbar';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 type LoginFormGroup = FormGroup<{
   username: FormControl<string>;
@@ -33,6 +34,7 @@ type LoginFormGroup = FormGroup<{
     MatFormField,
     MatInput,
     MatLabel,
+    MatProgressSpinnerModule,
     ReactiveFormsModule,
   ],
   templateUrl: './login-page-component.html',
@@ -43,6 +45,7 @@ export class LoginPageComponent {
   private readonly _router = inject(Router);
   private readonly _snackBar = inject(Snackbar);
   protected readonly isSigningIn = signal(false);
+  readonly isLoadingAdminPanel = signal(false);
 
   constructor() {
     effect(() => {
@@ -80,8 +83,12 @@ export class LoginPageComponent {
     this._authService
       .login(username, password)
       .subscribe({
-        next: () => this._router.navigateByUrl('/admin'),
+        next: () => {
+          this.isLoadingAdminPanel.set(true),
+          this._router.navigateByUrl('/admin')
+        },
         error: () => {
+          this.isLoadingAdminPanel.set(false);
           this.isSigningIn.set(false);
           this.showIncorrectCredentials();
         },
