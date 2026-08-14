@@ -4,7 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { Privilege } from '../../services/admin-api-service';
+import { Privilege } from '../../../services/admin-api-service';
 
 export type PrivilegeDialogData = {
   privilege?: Privilege;

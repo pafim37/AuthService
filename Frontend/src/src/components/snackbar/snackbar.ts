@@ -9,10 +9,10 @@ import {
 } from '@angular/material/snack-bar';
 
 @Component({
-  selector: 'app-incorrect-credentials-snackbar',
+  selector: 'app-snackbar',
   imports: [MatButton],
-  templateUrl: './incorrect-credentials-snackbar.html',
-  styleUrl: './incorrect-credentials-snackbar.css',
+  templateUrl: './snackbar.html',
+  styleUrl: './snackbar.css',
 })
 export class SnackbarComponent {
   readonly message = inject<string>(MAT_SNACK_BAR_DATA);

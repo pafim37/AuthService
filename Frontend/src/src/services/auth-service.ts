@@ -21,20 +21,21 @@ interface CurrentUser {
 @Injectable({
   providedIn: 'root',
 })
+
 export class AuthService {
   readonly currentUser = signal<string | null>(null);
 
   constructor(private readonly httpClient: HttpClient) {}
 
-  login(username: string, password: string): Observable<AuthToken> {
+  signin(login: string, password: string): Observable<AuthToken> {
     const request: SignInRequest = {
-      login: username,
+      login,
       password,
     };
 
     return this.httpClient.post<AuthToken>('/api/auth/admin-sign-in', request, { withCredentials: true }).pipe(
       tap(() => {
-        this.currentUser.set(username);
+        this.currentUser.set(login);
       }),
     );
   }
@@ -45,7 +46,7 @@ export class AuthService {
       tap((login) => this.currentUser.set(login)),
       catchError(() => {
         this.currentUser.set(null);
-        return of(null); // TODO: verify if of is not deprecated 
+        return of(null); 
       }),
     );
   }

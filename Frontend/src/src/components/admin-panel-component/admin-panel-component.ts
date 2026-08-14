@@ -18,11 +18,11 @@ import {
   UserRequest,
   UserUpdateRequest,
 } from '../../services/admin-api-service';
-import { ConfirmDialogComponent } from '../confirm-dialog-component/confirm-dialog-component';
-import { Snackbar } from '../incorrect-credentials-snackbar/incorrect-credentials-snackbar';
-import { PrivilegeDialogComponent, PrivilegeDialogData } from '../privilege-dialog-component/privilege-dialog-component';
-import { RoleDialogComponent, RoleDialogData } from '../role-dialog-component/role-dialog-component';
-import { UserDialogComponent, UserDialogData } from '../user-dialog-component/user-dialog-component';
+import { ConfirmDialogComponent } from '../dialogs/confirm-dialog-component/confirm-dialog-component';
+import { Snackbar } from '../snackbar/snackbar';
+import { PrivilegeDialogComponent, PrivilegeDialogData } from '../dialogs/privilege-dialog-component/privilege-dialog-component';
+import { RoleDialogComponent, RoleDialogData } from '../dialogs/role-dialog-component/role-dialog-component';
+import { UserDialogComponent, UserDialogData } from '../dialogs/user-dialog-component/user-dialog-component';
 import { MatTooltip } from '@angular/material/tooltip';
 
 @Component({
@@ -41,6 +41,7 @@ import { MatTooltip } from '@angular/material/tooltip';
   templateUrl: './admin-panel-component.html',
   styleUrl: './admin-panel-component.css',
 })
+
 export class AdminPanelComponent implements AfterViewInit {
   private readonly adminApiService = inject(AdminApiService);
   private readonly dialog = inject(MatDialog);

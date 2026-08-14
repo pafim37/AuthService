@@ -5,7 +5,7 @@ import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/materia
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { Role, User } from '../../services/admin-api-service';
+import { Role, User } from '../../../services/admin-api-service';
 
 export type UserDialogData = {
   mode: 'create' | 'create-admin' | 'edit';
