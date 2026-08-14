@@ -10,7 +10,7 @@ namespace AuthServer.Database
         {
             const string adminLogin = "admin";
             const string adminPassword = "admin";
-            const string administratorRoleName = "administrator";
+            const string administratorRoleName = "Administrator";
             const string fullPrivilegeName = "Full";
 
             PrivilegeEntity? fullPrivilege = await authContext.Privileges
@@ -65,6 +65,22 @@ namespace AuthServer.Database
                 };
 
                 await authContext.Users.AddAsync(adminUser, cancellationToken).ConfigureAwait(false);
+            }
+
+            RoleEntity? defaultRoleEntity = await authContext.Roles
+                .FirstOrDefaultAsync(role => role.Name == "Default", cancellationToken)
+                .ConfigureAwait(false);
+
+            if (defaultRoleEntity is null)
+            {
+                defaultRoleEntity = new()
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "Default",
+                    Privileges = []
+                };
+
+                await authContext.Roles.AddAsync(defaultRoleEntity, cancellationToken).ConfigureAwait(false);
             }
 
             await authContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

@@ -64,15 +64,15 @@ export class AdminPanelComponent implements AfterViewInit {
   }
 
   openCreateUser(): void {
-    this.openUserDialog({ mode: 'create', roles: this.rolesSource.data });
+    this.openUserDialog({ mode: 'create' });
   }
 
   openCreateAdmin(): void {
-    this.openUserDialog({ mode: 'create-admin', roles: this.rolesSource.data });
+    this.openUserDialog({ mode: 'create-admin' });
   }
 
   openEditUser(user: User): void {
-    this.openUserDialog({ mode: 'edit', roles: this.rolesSource.data, user });
+    this.openUserDialog({ mode: 'edit', user });
   }
 
   openCreateRole(): void {

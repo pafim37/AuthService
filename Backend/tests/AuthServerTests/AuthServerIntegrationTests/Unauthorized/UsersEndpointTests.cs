@@ -39,7 +39,7 @@ public sealed class UsersEndpointTests(DockerComposeFixture fixture)
     [Fact]
     public async Task CreateUser_WithoutAccessToken_ReturnsUnauthorized()
     {
-        var userData = new { Login = "userLogin", Password = "userPassword", Role = "administrator" };
+        var userData = new { Login = "userLogin", Password = "userPassword" };
         HttpContent body = JsonContent.Create(userData);
         using HttpResponseMessage response = await fixture.Client.PostAsync("/api/users", body);
 
@@ -50,7 +50,7 @@ public sealed class UsersEndpointTests(DockerComposeFixture fixture)
     public async Task UpdateUser_WithoutAccessToken_ReturnsUnauthorized()
     {
         Guid guid = Guid.NewGuid();
-        var userData = new { Login = "userLogin", Password = "userPassword", Role = "administrator" };
+        var userData = new { Login = "userLogin", Password = "userPassword" };
         HttpContent body = JsonContent.Create(userData);
         using HttpResponseMessage response = await fixture.Client.PutAsync($"/api/users/{guid}", body);
 

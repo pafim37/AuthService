@@ -49,7 +49,8 @@ namespace AuthServer.Controllers
             PrivilegeEntity newPrivilege = new()
             {
                 Id = Guid.NewGuid(),
-                Name = privilegeDto.Name
+                Name = privilegeDto.Name,
+                Description = privilegeDto.Description
             };
 
             await privilegeRepository.CreatePrivilegeAsync(newPrivilege, cancellationToken).ConfigureAwait(false);
