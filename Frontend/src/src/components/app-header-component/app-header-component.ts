@@ -17,7 +17,7 @@ export class AppHeaderComponent {
 
   public logout(): void {
     this.authService.logout().subscribe(() => {
-      this.router.navigateByUrl('/login');
+      this.router.navigateByUrl('/sign-in');
     });
   }
 }

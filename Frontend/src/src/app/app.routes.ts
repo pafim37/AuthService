@@ -2,21 +2,22 @@ import { Routes } from '@angular/router';
 import { AdminPanelComponent } from '../components/admin-panel-component/admin-panel-component';
 import { LoginPageComponent } from '../components/login-page-component/login-page-component';
 import { authGuard } from '../services/auth-guard';
+import { loginPageGuard } from '../services/login-page-guard';
 
 export const routes: Routes = [
   {
     path: '',
     pathMatch: 'full',
-    redirectTo: 'login',
+    redirectTo: 'sign-in',
   },
   {
+    canActivate: [loginPageGuard],
     component: LoginPageComponent,
-    path: 'login',
+    path: 'sign-in',
   },
   {
-    // TODO: impove that to protect resources not the UI
     canActivate: [authGuard],
     component: AdminPanelComponent,
-    path: 'admin',
+    path: 'panel',
   },
 ];

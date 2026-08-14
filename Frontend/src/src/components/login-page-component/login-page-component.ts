@@ -44,7 +44,6 @@ export class LoginPageComponent {
   private readonly _authService = inject(AuthService);
   private readonly _router = inject(Router);
   private readonly _snackBar = inject(Snackbar);
-  readonly isLoadingAdminPanel = signal(false);
 
   readonly loginForm: LoginFormGroup = new FormGroup({
     login: new FormControl('', {
@@ -70,7 +69,7 @@ export class LoginPageComponent {
       .signin(login, password)
       .subscribe({
         next: () => {
-          this._router.navigateByUrl('/admin');
+          this._router.navigateByUrl('/dashboard');
         },
         error: (e) => {
           if (e.status !== 403) {
