@@ -1,6 +1,6 @@
 .admin-panel {
   position: relative;
-  min-height: calc(100vh - 64px);
+  min-height: 100%;
   padding: 24px;
 }
 

@@ -1,3 +1,18 @@
 .container {
-  min-height: 100%;
+  display: flex;
+  min-height: 100dvh;
+  flex-direction: column;
+}
+
+.container > app-header-component {
+  flex: 0 0 auto;
+}
+
+.container > router-outlet {
+  display: none;
+}
+
+.container > :not(app-header-component):not(router-outlet) {
+  flex: 1 1 auto;
+  min-height: 0;
 }
