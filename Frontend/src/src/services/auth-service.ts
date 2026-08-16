@@ -18,6 +18,10 @@ interface CurrentUser {
   login: string;
 }
 
+export interface ChangePasswordRequest {
+  newPassword: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -56,5 +60,9 @@ export class AuthService {
       catchError(() => of(undefined)),
       tap(() => this.currentUser.set(null)),
     );
+  }
+
+  changePassword(request: ChangePasswordRequest): Observable<void> {
+    return this.httpClient.post<void>('/api/auth/change-password', request, { withCredentials: true });
   }
 }

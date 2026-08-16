@@ -265,4 +265,37 @@ public class AuthControllerTests
         Assert.NotNull(refreshToken.Entity.RevokedAtUtc);
         userRepository.Verify(m => m.UpdateUserAsync(user, cancellationToken), Times.Once);
     }
+
+    [Fact]
+    public async Task ChangePassword_WhenNewPasswordIsMissing_ReturnsBadRequest()
+    {
+        IActionResult result = await sut.ChangePassword(new ChangePasswordDto { NewPassword = "" }, cancellationToken);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task ChangePassword_WhenUserClaimIsMissing_ReturnsUnauthorized()
+    {
+        ControllerTestHelpers.SetHttpContext(sut, ControllerTestHelpers.HttpContextWithUser(login: "user"));
+
+        IActionResult result = await sut.ChangePassword(new ChangePasswordDto { NewPassword = "new-password" }, cancellationToken);
+
+        Assert.IsType<UnauthorizedObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task ChangePassword_WhenUserExists_UpdatesPasswordAndIncrementsSessionVersion()
+    {
+        UserEntity user = ControllerTestHelpers.User("user", BCrypt.Net.BCrypt.HashPassword("old-password"));
+        ControllerTestHelpers.SetHttpContext(sut, ControllerTestHelpers.HttpContextWithUser(user.Id, "user"));
+        userRepository.Setup(m => m.GetUserByIdAsync(user.Id, cancellationToken)).ReturnsAsync(user);
+
+        IActionResult result = await sut.ChangePassword(new ChangePasswordDto { NewPassword = "new-password" }, cancellationToken);
+
+        Assert.IsType<OkObjectResult>(result);
+        Assert.True(BCrypt.Net.BCrypt.Verify("new-password", user.PasswordHashed));
+        Assert.Equal(1, user.SessionVersion);
+        userRepository.Verify(m => m.UpdateUserAsync(user, cancellationToken), Times.Once);
+    }
 }

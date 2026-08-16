@@ -26,35 +26,14 @@
   font: var(--mat-sys-body-medium);
 }
 
-.header-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-left: auto;
-  white-space: nowrap;
-}
-
-.user-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.user-actions span {
+.menu-title {
   color: var(--mat-sys-on-surface);
   font-weight: 500;
+  opacity: 1;
 }
 
-.actions-separator {
-  align-self: stretch;
-  width: 1px;
-  min-height: 32px;
-  background: var(--mat-sys-outline-variant);
-}
-
-.theme-label {
-  min-width: 50px;
+.theme-menu-item {
+  min-width: 220px;
 }
 
 @media (max-width: 600px) {
@@ -65,15 +44,8 @@
     padding: 12px 20px;
   }
 
-  .header-actions {
-    justify-content: space-between;
-    margin-left: 0;
-    width: 100%;
-    flex-wrap: wrap;
-    white-space: normal;
-  }
-
-  .actions-separator {
-    display: none;
+  .app-header {
+    flex-direction: row;
+    align-items: center;
   }
 }

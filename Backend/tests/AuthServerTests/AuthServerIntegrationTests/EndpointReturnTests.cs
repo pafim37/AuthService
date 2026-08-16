@@ -194,6 +194,27 @@ public sealed class EndpointReturnTests(DockerComposeFixture fixture)
     }
 
     [Fact]
+    public async Task AuthChangePassword_ChangesPasswordForAuthenticatedUser()
+    {
+        string login = Unique("password-user");
+        string originalPassword = "password";
+        string newPassword = "new-password";
+
+        using HttpResponseMessage signUpResponse = await fixture.Client.PostAsJsonAsync("/api/auth/sign-up", new { Login = login, Password = originalPassword });
+        AuthTokenDto tokens = (await signUpResponse.Content.ReadFromJsonAsync<AuthTokenDto>())!;
+        SetAuthorization(tokens.AccessToken);
+
+        using HttpResponseMessage changePasswordResponse = await fixture.Client.PostAsJsonAsync("/api/auth/change-password", new { NewPassword = newPassword });
+        Assert.Equal(HttpStatusCode.OK, changePasswordResponse.StatusCode);
+
+        using HttpResponseMessage oldPasswordResponse = await fixture.Client.PostAsJsonAsync("/api/auth/sign-in", new { Login = login, Password = originalPassword });
+        Assert.Equal(HttpStatusCode.Unauthorized, oldPasswordResponse.StatusCode);
+
+        using HttpResponseMessage newPasswordResponse = await fixture.Client.PostAsJsonAsync("/api/auth/sign-in", new { Login = login, Password = newPassword });
+        Assert.Equal(HttpStatusCode.OK, newPasswordResponse.StatusCode);
+    }
+
+    [Fact]
     public async Task PrivilegesEndpoints_ReturnAllReturnPaths()
     {
         await AuthorizeAsAdminAsync();

@@ -122,6 +122,7 @@ namespace AuthServer.Controllers
         }
 
         [HttpPost("admin-sign-in")]
+        [AllowAnonymous]
         public async Task<IActionResult> AdminSignIn([FromBody] SignInDto signInDto, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(signInDto.Login) || string.IsNullOrWhiteSpace(signInDto.Password))
@@ -198,6 +199,35 @@ namespace AuthServer.Controllers
 
             DeleteAuthenticationCookies();
             return Ok("Logout successful.");
+        }
+
+        [HttpPost("change-password")]
+        [Authorize]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto changePasswordDto, CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(changePasswordDto.NewPassword))
+            {
+                return BadRequest("New password is required.");
+            }
+
+            string? userIdValue = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdValue, out Guid userId))
+            {
+                return Unauthorized("Invalid user.");
+            }
+
+            UserEntity? user = await userRepository.GetUserByIdAsync(userId, cancellationToken).ConfigureAwait(false);
+            if (user is null || string.IsNullOrWhiteSpace(user.PasswordHashed))
+            {
+                return Unauthorized("Invalid user.");
+            }
+
+            user.PasswordHashed = PasswordHasher.HashPassword(changePasswordDto.NewPassword);
+            user.SessionVersion++;
+
+            await userRepository.UpdateUserAsync(user, cancellationToken).ConfigureAwait(false);
+
+            return Ok("Password changed successfully.");
         }
 
         private async Task<AuthTokenDto> CreateTokenPairAsync(UserEntity user, CancellationToken cancellationToken)

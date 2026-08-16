@@ -4,23 +4,46 @@
     <span>Administrator Panel</span>
   </div>
 
-  <div class="header-actions">
-    @if (currentUser(); as user) {
-      <div class="user-actions">
-        <span>Hello {{ user }}!</span>
-        <button matButton="outlined" type="button" (click)="logout()">Logout</button>
-      </div>
-      <span class="actions-separator" aria-hidden="true"></span>
-    }
+  @if (currentUser(); as user) {
+    <button matIconButton type="button" [matMenuTriggerFor]="userMenu" aria-label="Open user menu">
+      <mat-icon>menu</mat-icon>
+    </button>
 
-    <mat-slide-toggle
-      [checked]="isDarkTheme()"
-      aria-label="Toggle dark mode"
-      (change)="toggleTheme($event)"
-    >
-      <div class="theme-label">
-        {{ isDarkTheme() ? 'Dark' : 'Light' }}
+    <mat-menu #userMenu="matMenu" xPosition="before" class="user-menu">
+      <div class="menu-title" mat-menu-item disabled>{{ user }}</div>
+
+      <mat-divider></mat-divider>
+
+      <div class="theme-menu-item" mat-menu-item disableRipple (click)="$event.stopPropagation()">
+        <mat-slide-toggle
+          [checked]="isDarkTheme()"
+          aria-label="Toggle dark mode"
+          (change)="toggleTheme($event)"
+        >
+          {{ isDarkTheme() ? 'Dark' : 'Light' }}
+        </mat-slide-toggle>
       </div>
-    </mat-slide-toggle>
-  </div>
+
+      <mat-divider></mat-divider>
+
+      <button mat-menu-item type="button" (click)="changePassword()">
+        <mat-icon>lock_reset</mat-icon>
+        <span>Change password</span>
+      </button>
+      <button mat-menu-item type="button" (click)="logout()">
+        <mat-icon>logout</mat-icon>
+        <span>Logout</span>
+      </button>
+    </mat-menu>
+  } @else {
+    <div class="header-actions">
+      <mat-slide-toggle
+        [checked]="isDarkTheme()"
+        aria-label="Toggle dark mode"
+        (change)="toggleTheme($event)"
+      >
+        {{ isDarkTheme() ? 'Dark' : 'Light' }}
+      </mat-slide-toggle>
+    </div>
+  }
 </header>
