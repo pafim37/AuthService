@@ -42,6 +42,7 @@ export interface PrivilegeRequest {
 @Injectable({
   providedIn: 'root',
 })
+
 export class AdminApiService {
   private readonly httpClient = inject(HttpClient);
 

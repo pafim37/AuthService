@@ -1,6 +1,4 @@
 import { Routes } from '@angular/router';
-import { AdminPanelComponent } from '../components/admin-panel-component/admin-panel-component';
-import { LoginPageComponent } from '../components/login-page-component/login-page-component';
 import { authGuard } from '../services/auth-guard';
 import { loginPageGuard } from '../services/login-page-guard';
 
@@ -12,12 +10,18 @@ export const routes: Routes = [
   },
   {
     canActivate: [loginPageGuard],
-    component: LoginPageComponent,
+    loadComponent: () =>
+      import('../components/login-page-component/login-page-component').then(
+        (component) => component.LoginPageComponent,
+      ),
     path: 'sign-in',
   },
   {
     canActivate: [authGuard],
-    component: AdminPanelComponent,
+    loadComponent: () =>
+      import('../components/admin-panel-component/admin-panel-component').then(
+        (component) => component.AdminPanelComponent,
+      ),
     path: 'dashboard',
   },
 ];
