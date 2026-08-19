@@ -2,7 +2,8 @@
 {
     internal static class TestConfig
     {
-        // TODO: change to environment variable
-        public static readonly bool RunInDocker = true;
+        public static readonly bool RunInDocker = !bool.TryParse(
+            System.Environment.GetEnvironmentVariable("AUTH_SERVICE_RUN_IN_DOCKER"),
+            out bool runInDocker) || runInDocker;
     }
 }

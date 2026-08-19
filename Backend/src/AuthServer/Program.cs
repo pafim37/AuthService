@@ -12,16 +12,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
-// TODO: Hide secrets from configuration files.
 IConfigurationSection jwtSettings = builder.Configuration.GetSection("Jwt");
-string? signingKey = jwtSettings["AuthServiceKey"];
-if (string.IsNullOrWhiteSpace(signingKey))
-{
-    throw new InvalidOperationException("JWT signing key is not configured. Please set Jwt:AuthServiceKey in configuration or environment variables.");
-}
-
-string issuer = jwtSettings["Issuer"] ?? throw new InvalidOperationException("JWT issuer is not configured.");
-string audience = jwtSettings["Audience"] ?? throw new InvalidOperationException("JWT audience is not configured.");
+string signingKey = GetJwtSetting(jwtSettings, "AuthServiceKey", "JWT signing key");
+string issuer = GetJwtSetting(jwtSettings, "Issuer", "JWT issuer");
+string audience = GetJwtSetting(jwtSettings, "Audience", "JWT audience");
 
 builder.Services.AddDbContext<AuthContext>(options =>
                 options.UseSqlServer(builder.Configuration["ConnectionStrings:Default"]),
@@ -84,10 +78,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddAuthorization(options =>
-{
-    options.AddPolicy("FullPrivilege", policy => policy.RequireClaim("privilege", "Full"));
-});
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy("FullPrivilege", policy => policy.RequireClaim("privilege", "Full"));
 
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -136,3 +128,18 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+static string GetJwtSetting(IConfigurationSection jwtSettings, string key, string settingName)
+{
+    string? value = jwtSettings[key]
+        ?? Environment.GetEnvironmentVariable($"Jwt__{key}")
+        ?? Environment.GetEnvironmentVariable($"JWT__{key.ToUpperInvariant()}");
+
+    if (string.IsNullOrWhiteSpace(value))
+    {
+        throw new InvalidOperationException(
+            $"{settingName} is not configured. Please set Jwt:{key} in configuration or Jwt__{key} in environment variables.");
+    }
+
+    return value;
+}

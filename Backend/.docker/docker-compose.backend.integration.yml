@@ -4,8 +4,7 @@ services:
     image: mcr.microsoft.com/mssql/server:2022-latest
     environment:
       ACCEPT_EULA: "Y"
-      # TODO: Move this password to a secret store and reference it here instead of hardcoding it.
-      MSSQL_SA_PASSWORD: "AuthService123!Pass" 
+      MSSQL_SA_PASSWORD: "AuthServiceDevelopmentPassword123!" 
     healthcheck:
       test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$${MSSQL_SA_PASSWORD}\" -C -Q \"SELECT 1\" || exit 1"]
       interval: 5s
@@ -20,8 +19,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: "Development"
       ASPNETCORE_URLS: "http://+:5124"
-      # TODO: Move this connection string to a secret store and reference it here instead of hardcoding it.
-      ConnectionStrings__Default: "Server=database,1433;Database=AuthServiceDatabase;User Id=sa;Password=AuthService123!Pass;TrustServerCertificate=True;Encrypt=True;"
+      ConnectionStrings__Default: "Server=database,1433;Database=AuthServiceDatabase;User Id=sa;Password=AuthServiceDevelopmentPassword123!;TrustServerCertificate=True;Encrypt=True;"
       Jwt__Issuer: "AuthServerService"
       Jwt__Audience: "AdministratorPanel"
       Jwt__AuthServiceKey: "DevelopmentOnlyAuthServiceKeyThatShouldBeReplacedWithASecretValue12345"
