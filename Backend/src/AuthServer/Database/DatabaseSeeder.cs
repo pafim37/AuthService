@@ -6,10 +6,9 @@ namespace AuthServer.Database
 {
     internal static class DatabaseSeeder
     {
-        internal static async Task SeedAsync(AuthContext authContext, CancellationToken cancellationToken = default)
+        internal static async Task SeedAsync(AuthContext authContext, IConfiguration configuration, CancellationToken cancellationToken = default)
         {
             const string adminLogin = "admin";
-            const string adminPassword = "admin";
             const string administratorRoleName = "Administrator";
             const string fullPrivilegeName = "Full";
 
@@ -55,6 +54,10 @@ namespace AuthServer.Database
 
             if (adminUser is null)
             {
+                string adminPassword = configuration["SeedAdmin:Password"]
+                    ?? Environment.GetEnvironmentVariable("AUTH_SERVICE_ADMIN_PASSWORD")
+                    ?? throw new InvalidOperationException("Built-in admin user does not exist and seed password is not configured. Set SeedAdmin:Password or AUTH_SERVICE_ADMIN_PASSWORD to create the initial admin account.");
+
                 adminUser = new()
                 {
                     Id = Guid.NewGuid(),
@@ -87,3 +90,5 @@ namespace AuthServer.Database
         }
     }
 }
+
+

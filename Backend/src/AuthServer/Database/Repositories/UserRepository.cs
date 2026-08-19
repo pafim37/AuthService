@@ -51,5 +51,29 @@ namespace AuthServer.Database.Repositories
             authContext.Users.Remove(user);
             await authContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
+
+        public async Task IncrementSessionVersionForRoleAsync(Guid roleId, CancellationToken cancellationToken)
+        {
+            await authContext.Users
+                .Where(user => user.RoleId == roleId)
+                .ExecuteUpdateAsync(
+                    setters => setters.SetProperty(user => user.SessionVersion, user => user.SessionVersion + 1),
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        public async Task IncrementSessionVersionForRolesWithPrivilegeAsync(Guid privilegeId, CancellationToken cancellationToken)
+        {
+            IQueryable<Guid> affectedRoleIds = authContext.Roles
+                .Where(role => role.Privileges.Any(privilege => privilege.Id == privilegeId))
+                .Select(role => role.Id);
+
+            await authContext.Users
+                .Where(user => affectedRoleIds.Contains(user.RoleId))
+                .ExecuteUpdateAsync(
+                    setters => setters.SetProperty(user => user.SessionVersion, user => user.SessionVersion + 1),
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
     }
 }

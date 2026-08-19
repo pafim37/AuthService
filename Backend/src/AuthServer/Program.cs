@@ -7,6 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using System.Security.Claims;
 using System.Text;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,6 +21,24 @@ string audience = GetJwtSetting(jwtSettings, "Audience", "JWT audience");
 builder.Services.AddDbContext<AuthContext>(options =>
                 options.UseSqlServer(builder.Configuration["ConnectionStrings:Default"]),
                 ServiceLifetime.Scoped);
+
+builder.Services.AddMemoryCache();
+builder.Services.AddRateLimiter(options =>
+{
+    int authenticationPermitLimit = builder.Configuration.GetValue("RateLimiting:Authentication:PermitLimit", 100);
+    TimeSpan authenticationWindow = TimeSpan.FromSeconds(
+        builder.Configuration.GetValue("RateLimiting:Authentication:WindowSeconds", 60));
+
+    options.AddPolicy("Authentication", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = authenticationPermitLimit,
+                Window = authenticationWindow,
+                QueueLimit = 0
+            }));
+});
 
 builder.Services.AddComponentsFromAssemblyContaining<Program>();
 builder.Services.AddMediatR(configuration => configuration.RegisterServicesFromAssemblyContaining<Program>());
@@ -81,7 +100,10 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy("FullPrivilege", policy => policy.RequireClaim("privilege", "Full"));
 
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<LoginLockoutFilter>();
+});
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddSwaggerGen(options =>
@@ -109,7 +131,7 @@ using (IServiceScope scope = app.Services.CreateScope())
 {
     AuthContext authContext = scope.ServiceProvider.GetRequiredService<AuthContext>();
     await authContext.Database.MigrateAsync();
-    await DatabaseSeeder.SeedAsync(authContext);
+    await DatabaseSeeder.SeedAsync(authContext, app.Configuration);
 }
 
 // Configure the HTTP request pipeline.
@@ -122,6 +144,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 

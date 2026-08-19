@@ -8,7 +8,7 @@ import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatTabsModule } from '@angular/material/tabs';
-import { forkJoin } from 'rxjs';
+import { finalize, forkJoin } from 'rxjs';
 import {
   AdminApiService,
   Privilege,
@@ -119,16 +119,18 @@ export class AdminPanelComponent implements AfterViewInit {
       roles: this.adminApiService.getRoles(),
       users: this.adminApiService.getUsers(),
     })
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        finalize(() => this.isLoading.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
-      next: ({ privileges, roles, users }) => {
-        this.privilegesSource.data = privileges;
-        this.rolesSource.data = roles;
-        this.usersSource.data = users;
-      },
-      error: () => this.snackBar.openSnackBar('Cannot load administration data'),
-      complete: () => this.isLoading.set(false),
-    });
+        next: ({ privileges, roles, users }) => {
+          this.privilegesSource.data = privileges;
+          this.rolesSource.data = roles;
+          this.usersSource.data = users;
+        },
+        error: () => this.snackBar.openSnackBar('Cannot load administration data'),
+      });
   }
 
   private openUserDialog(data: UserDialogData): void {

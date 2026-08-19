@@ -80,7 +80,7 @@ public sealed class EndpointReturnTests(DockerComposeFixture fixture)
     [Fact]
     public async Task AuthRefresh_ReturnsBadRequest_WhenRefreshTokenIsMissing()
     {
-        using HttpResponseMessage response = await fixture.Client.PostAsJsonAsync("/api/auth/refresh", new { RefreshToken = "" });
+        using HttpResponseMessage response = await fixture.Client.PostAsync("/api/auth/refresh", null);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -88,7 +88,7 @@ public sealed class EndpointReturnTests(DockerComposeFixture fixture)
     [Fact]
     public async Task AuthRefresh_ReturnsUnauthorized_WhenRefreshTokenIsInvalid()
     {
-        using HttpResponseMessage response = await fixture.Client.PostAsJsonAsync("/api/auth/refresh", new { RefreshToken = "invalid-refresh-token" });
+        using HttpResponseMessage response = await SendWithRefreshTokenCookieAsync("/api/auth/refresh", "invalid-refresh-token");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -98,7 +98,7 @@ public sealed class EndpointReturnTests(DockerComposeFixture fixture)
     {
         AuthTokenDto tokens = await SignInAsync("admin", "admin");
 
-        using HttpResponseMessage response = await fixture.Client.PostAsJsonAsync("/api/auth/refresh", new { tokens.RefreshToken });
+        using HttpResponseMessage response = await SendWithRefreshTokenCookieAsync("/api/auth/refresh", tokens.RefreshToken);
 
         AuthTokenDto? refreshedTokens = await response.Content.ReadFromJsonAsync<AuthTokenDto>();
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -157,7 +157,7 @@ public sealed class EndpointReturnTests(DockerComposeFixture fixture)
     {
         ClearAuthorization();
 
-        using HttpResponseMessage response = await fixture.Client.PostAsJsonAsync("/api/auth/logout", new { RefreshToken = "anything" });
+        using HttpResponseMessage response = await SendWithRefreshTokenCookieAsync("/api/auth/logout", "anything");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -167,7 +167,7 @@ public sealed class EndpointReturnTests(DockerComposeFixture fixture)
     {
         await AuthorizeAsAdminAsync();
 
-        using HttpResponseMessage response = await fixture.Client.PostAsJsonAsync("/api/auth/logout", new { RefreshToken = "" });
+        using HttpResponseMessage response = await fixture.Client.PostAsync("/api/auth/logout", null);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -177,7 +177,7 @@ public sealed class EndpointReturnTests(DockerComposeFixture fixture)
     {
         await AuthorizeAsAdminAsync();
 
-        using HttpResponseMessage response = await fixture.Client.PostAsJsonAsync("/api/auth/logout", new { RefreshToken = "unknown-refresh-token" });
+        using HttpResponseMessage response = await SendWithRefreshTokenCookieAsync("/api/auth/logout", "unknown-refresh-token");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
@@ -188,7 +188,7 @@ public sealed class EndpointReturnTests(DockerComposeFixture fixture)
         AuthTokenDto tokens = await SignInAsync("admin", "admin");
         SetAuthorization(tokens.AccessToken);
 
-        using HttpResponseMessage response = await fixture.Client.PostAsJsonAsync("/api/auth/logout", new { tokens.RefreshToken });
+        using HttpResponseMessage response = await SendWithRefreshTokenCookieAsync("/api/auth/logout", tokens.RefreshToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
@@ -204,7 +204,7 @@ public sealed class EndpointReturnTests(DockerComposeFixture fixture)
         AuthTokenDto tokens = (await signUpResponse.Content.ReadFromJsonAsync<AuthTokenDto>())!;
         SetAuthorization(tokens.AccessToken);
 
-        using HttpResponseMessage changePasswordResponse = await fixture.Client.PostAsJsonAsync("/api/auth/change-password", new { NewPassword = newPassword });
+        using HttpResponseMessage changePasswordResponse = await fixture.Client.PostAsJsonAsync("/api/auth/change-password", new { CurrentPassword = originalPassword, NewPassword = newPassword });
         Assert.Equal(HttpStatusCode.OK, changePasswordResponse.StatusCode);
 
         using HttpResponseMessage oldPasswordResponse = await fixture.Client.PostAsJsonAsync("/api/auth/sign-in", new { Login = login, Password = originalPassword });
@@ -409,6 +409,13 @@ public sealed class EndpointReturnTests(DockerComposeFixture fixture)
     {
         AuthTokenDto tokens = await SignInAsync("admin", "admin");
         SetAuthorization(tokens.AccessToken);
+    }
+
+    private async Task<HttpResponseMessage> SendWithRefreshTokenCookieAsync(string url, string refreshToken)
+    {
+        using HttpRequestMessage request = new(HttpMethod.Post, url);
+        request.Headers.Add("Cookie", $"auth_refresh_token={refreshToken}");
+        return await fixture.Client.SendAsync(request);
     }
 
     private async Task<AuthTokenDto> SignInAsync(string login, string password)

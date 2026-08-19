@@ -10,12 +10,13 @@ namespace AuthServerUnitTests;
 public class PrivilegeControllerTests
 {
     private readonly Mock<IPrivilegeRepository> privilegeRepository = new();
+    private readonly Mock<IUserRepository> userRepository = new();
     private readonly PrivilegeController sut;
     private readonly CancellationToken cancellationToken = CancellationToken.None;
 
     public PrivilegeControllerTests()
     {
-        sut = new PrivilegeController(privilegeRepository.Object);
+        sut = new PrivilegeController(privilegeRepository.Object, userRepository.Object);
     }
 
     [Fact]
@@ -218,3 +219,4 @@ public class PrivilegeControllerTests
         privilegeRepository.Verify(m => m.RemovePrivilegeAsync(privilege, cancellationToken), Times.Once);
     }
 }
+

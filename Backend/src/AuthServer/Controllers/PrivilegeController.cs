@@ -9,7 +9,9 @@ namespace AuthServer.Controllers
     [ApiController]
     [Authorize(Policy = "FullPrivilege")]
     [Route("api/privileges")]
-    public class PrivilegeController(IPrivilegeRepository privilegeRepository) : ControllerBase
+    public class PrivilegeController(
+        IPrivilegeRepository privilegeRepository,
+        IUserRepository userRepository) : ControllerBase
     {
         private const string ProtectedFullPrivilegeName = "Full";
 
@@ -79,6 +81,7 @@ namespace AuthServer.Controllers
 
             privilege.Name = privilegeDto.Name;
             await privilegeRepository.UpdatePrivilegeAsync(privilege, cancellationToken).ConfigureAwait(false);
+            await userRepository.IncrementSessionVersionForRolesWithPrivilegeAsync(privilege.Id, cancellationToken).ConfigureAwait(false);
             return Ok(ToDto(privilege));
         }
 
@@ -108,6 +111,7 @@ namespace AuthServer.Controllers
             }
 
             await privilegeRepository.UpdatePrivilegeAsync(privilege, cancellationToken).ConfigureAwait(false);
+            await userRepository.IncrementSessionVersionForRolesWithPrivilegeAsync(privilege.Id, cancellationToken).ConfigureAwait(false);
             return Ok(ToDto(privilege));
         }
 
@@ -125,6 +129,7 @@ namespace AuthServer.Controllers
                 return Conflict("Built-in Full privilege cannot be deleted.");
             }
 
+            await userRepository.IncrementSessionVersionForRolesWithPrivilegeAsync(privilege.Id, cancellationToken).ConfigureAwait(false);
             await privilegeRepository.RemovePrivilegeAsync(privilege, cancellationToken).ConfigureAwait(false);
             return NoContent();
         }

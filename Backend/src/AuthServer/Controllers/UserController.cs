@@ -99,6 +99,7 @@ namespace AuthServer.Controllers
 
             user.Login = userDto.Login;
             user.PasswordHashed = PasswordHasher.HashPassword(userDto.Password!);
+            user.SessionVersion++;
 
             await userRepository.UpdateUserAsync(user, cancellationToken).ConfigureAwait(false);
             return Ok(ToDto(user));
@@ -127,6 +128,7 @@ namespace AuthServer.Controllers
             if (!string.IsNullOrWhiteSpace(userDto.Password))
             {
                 user.PasswordHashed = PasswordHasher.HashPassword(userDto.Password);
+                user.SessionVersion++;
             }
 
             if (!string.IsNullOrWhiteSpace(userDto.Role))
@@ -139,6 +141,7 @@ namespace AuthServer.Controllers
 
                 user.RoleId = role.Id;
                 user.Role = role;
+                user.SessionVersion++;
             }
 
             await userRepository.UpdateUserAsync(user, cancellationToken).ConfigureAwait(false);

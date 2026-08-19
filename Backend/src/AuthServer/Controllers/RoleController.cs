@@ -9,7 +9,10 @@ namespace AuthServer.Controllers
     [ApiController]
     [Authorize(Policy = "FullPrivilege")]
     [Route("api/roles")]
-    public class RoleController(IRoleRepository roleRepository, IPrivilegeRepository privilegeRepository) : ControllerBase
+    public class RoleController(
+        IRoleRepository roleRepository,
+        IPrivilegeRepository privilegeRepository,
+        IUserRepository userRepository) : ControllerBase
     {
         private const string ProtectedAdministratorRoleName = "administrator";
 
@@ -97,6 +100,7 @@ namespace AuthServer.Controllers
             }
 
             await roleRepository.UpdateRoleAsync(role, cancellationToken).ConfigureAwait(false);
+            await userRepository.IncrementSessionVersionForRoleAsync(role.Id, cancellationToken).ConfigureAwait(false);
             return Ok(ToDto(role));
         }
 
@@ -136,6 +140,7 @@ namespace AuthServer.Controllers
             }
 
             await roleRepository.UpdateRoleAsync(role, cancellationToken).ConfigureAwait(false);
+            await userRepository.IncrementSessionVersionForRoleAsync(role.Id, cancellationToken).ConfigureAwait(false);
             return Ok(ToDto(role));
         }
 

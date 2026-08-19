@@ -11,12 +11,13 @@ public class RoleControllerTests
 {
     private readonly Mock<IRoleRepository> roleRepository = new();
     private readonly Mock<IPrivilegeRepository> privilegeRepository = new();
+    private readonly Mock<IUserRepository> userRepository = new();
     private readonly RoleController sut;
     private readonly CancellationToken cancellationToken = CancellationToken.None;
 
     public RoleControllerTests()
     {
-        sut = new RoleController(roleRepository.Object, privilegeRepository.Object);
+        sut = new RoleController(roleRepository.Object, privilegeRepository.Object, userRepository.Object);
     }
 
     [Fact]

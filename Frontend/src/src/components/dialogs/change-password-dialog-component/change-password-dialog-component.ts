@@ -6,6 +6,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 
 export interface ChangePasswordDialogResult {
+  currentPassword: string;
   newPassword: string;
 }
 
@@ -25,6 +26,10 @@ export class ChangePasswordDialogComponent {
   private readonly dialogRef = inject(MatDialogRef<ChangePasswordDialogComponent>);
 
   protected readonly form = new FormGroup({
+    currentPassword: new FormControl('', {
+      nonNullable: true,
+      validators: Validators.required,
+    }),
     newPassword: new FormControl('', {
       nonNullable: true,
       validators: Validators.required,
@@ -40,7 +45,10 @@ export class ChangePasswordDialogComponent {
       return;
     }
 
-    this.dialogRef.close({ newPassword: this.form.controls.newPassword.value });
+    this.dialogRef.close({
+      currentPassword: this.form.controls.currentPassword.value,
+      newPassword: this.form.controls.newPassword.value,
+    });
   }
 
   private passwordsMatch(control: AbstractControl): ValidationErrors | null {

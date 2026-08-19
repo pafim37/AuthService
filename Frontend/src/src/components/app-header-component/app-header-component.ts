@@ -9,6 +9,7 @@ import { MatSlideToggle, MatSlideToggleChange } from '@angular/material/slide-to
 import { Router } from '@angular/router';
 import { filter, switchMap } from 'rxjs';
 import { AuthService } from '../../services/auth-service';
+import { Snackbar } from '../snackbar/snackbar';
 import {
   ChangePasswordDialogComponent,
   ChangePasswordDialogResult,
@@ -27,6 +28,7 @@ export class AppHeaderComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly dialog = inject(MatDialog);
   private readonly router = inject(Router);
+  private readonly snackBar = inject(Snackbar);
 
   public readonly currentUser = this.authService.currentUser;
   public readonly isDarkTheme = signal(this.getStoredTheme() === 'dark');
@@ -53,7 +55,16 @@ export class AppHeaderComponent {
         switchMap((result) => this.authService.changePassword(result)),
         takeUntilDestroyed(this.destroyRef),
       )
-      .subscribe();
+      .subscribe({
+        next: () => this.snackBar.openSnackBar('Password changed successfully.'),
+        error: (e) => {
+          if (e.status === 401) {
+            this.snackBar.openSnackBar('Current password is incorrect.');
+          } else {
+            this.snackBar.openSnackBar('Cannot change password.');
+          }
+        },
+      });
   }
 
   public toggleTheme(event: MatSlideToggleChange): void {

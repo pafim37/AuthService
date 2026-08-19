@@ -129,7 +129,7 @@ public class AuthControllerTests
     [Fact]
     public async Task Refresh_WhenTokenIsMissing_ReturnsBadRequest()
     {
-        IActionResult result = await sut.Refresh(new RefreshTokenDto(), cancellationToken);
+        IActionResult result = await sut.Refresh(cancellationToken);
 
         Assert.IsType<BadRequestObjectResult>(result);
     }
@@ -137,7 +137,9 @@ public class AuthControllerTests
     [Fact]
     public async Task Refresh_WhenTokenIsInvalid_ReturnsUnauthorized()
     {
-        IActionResult result = await sut.Refresh(new RefreshTokenDto { RefreshToken = "invalid" }, cancellationToken);
+        SetRefreshTokenCookie("invalid");
+
+        IActionResult result = await sut.Refresh(cancellationToken);
 
         Assert.IsType<UnauthorizedObjectResult>(result);
     }
@@ -150,7 +152,9 @@ public class AuthControllerTests
         RefreshTokenResult refreshToken = await refreshTokenService.CreateRefreshTokenAsync(user, cancellationToken);
         await refreshTokenService.SaveChangesAsync(cancellationToken);
 
-        IActionResult result = await sut.Refresh(new RefreshTokenDto { RefreshToken = refreshToken.Token }, cancellationToken);
+        SetRefreshTokenCookie(refreshToken.Token);
+
+        IActionResult result = await sut.Refresh(cancellationToken);
 
         AuthTokenDto tokens = ControllerTestHelpers.OkValueOf<AuthTokenDto>(result);
         Assert.False(string.IsNullOrWhiteSpace(tokens.AccessToken));
@@ -234,7 +238,7 @@ public class AuthControllerTests
     [Fact]
     public async Task Logout_WhenTokenIsMissing_ReturnsBadRequest()
     {
-        IActionResult result = await sut.Logout(new RefreshTokenDto(), cancellationToken);
+        IActionResult result = await sut.Logout(cancellationToken);
 
         Assert.IsType<BadRequestObjectResult>(result);
     }
@@ -242,10 +246,10 @@ public class AuthControllerTests
     [Fact]
     public async Task Logout_WhenTokenExistsWithoutStoredToken_ReturnsOk()
     {
-        IActionResult result = await sut.Logout(new RefreshTokenDto { RefreshToken = "missing" }, cancellationToken);
+        SetRefreshTokenCookie("missing");
 
-        var ok = Assert.IsType<OkObjectResult>(result);
-        Assert.Equal("Logout successful.", ok.Value);
+        IActionResult result = await sut.Logout(cancellationToken);
+        _ = Assert.IsType<OkResult>(result);
     }
 
     [Fact]
@@ -258,9 +262,11 @@ public class AuthControllerTests
         ControllerTestHelpers.SetHttpContext(sut, ControllerTestHelpers.HttpContextWithUser(user.Id, "user"));
         userRepository.Setup(m => m.GetUserByIdAsync(user.Id, cancellationToken)).ReturnsAsync(user);
 
-        IActionResult result = await sut.Logout(new RefreshTokenDto { RefreshToken = refreshToken.Token }, cancellationToken);
+        SetRefreshTokenCookie(refreshToken.Token);
 
-        Assert.IsType<OkObjectResult>(result);
+        IActionResult result = await sut.Logout(cancellationToken);
+
+        Assert.IsType<OkResult>(result);
         Assert.Equal(1, user.SessionVersion);
         Assert.NotNull(refreshToken.Entity.RevokedAtUtc);
         userRepository.Verify(m => m.UpdateUserAsync(user, cancellationToken), Times.Once);
@@ -269,7 +275,7 @@ public class AuthControllerTests
     [Fact]
     public async Task ChangePassword_WhenNewPasswordIsMissing_ReturnsBadRequest()
     {
-        IActionResult result = await sut.ChangePassword(new ChangePasswordDto { NewPassword = "" }, cancellationToken);
+        IActionResult result = await sut.ChangePassword(new ChangePasswordDto { CurrentPassword = "old-password", NewPassword = "" }, cancellationToken);
 
         Assert.IsType<BadRequestObjectResult>(result);
     }
@@ -279,7 +285,7 @@ public class AuthControllerTests
     {
         ControllerTestHelpers.SetHttpContext(sut, ControllerTestHelpers.HttpContextWithUser(login: "user"));
 
-        IActionResult result = await sut.ChangePassword(new ChangePasswordDto { NewPassword = "new-password" }, cancellationToken);
+        IActionResult result = await sut.ChangePassword(new ChangePasswordDto { CurrentPassword = "old-password", NewPassword = "new-password" }, cancellationToken);
 
         Assert.IsType<UnauthorizedObjectResult>(result);
     }
@@ -291,11 +297,16 @@ public class AuthControllerTests
         ControllerTestHelpers.SetHttpContext(sut, ControllerTestHelpers.HttpContextWithUser(user.Id, "user"));
         userRepository.Setup(m => m.GetUserByIdAsync(user.Id, cancellationToken)).ReturnsAsync(user);
 
-        IActionResult result = await sut.ChangePassword(new ChangePasswordDto { NewPassword = "new-password" }, cancellationToken);
+        IActionResult result = await sut.ChangePassword(new ChangePasswordDto { CurrentPassword = "old-password", NewPassword = "new-password" }, cancellationToken);
 
-        Assert.IsType<OkObjectResult>(result);
+        Assert.IsType<OkResult>(result);
         Assert.True(BCrypt.Net.BCrypt.Verify("new-password", user.PasswordHashed));
         Assert.Equal(1, user.SessionVersion);
         userRepository.Verify(m => m.UpdateUserAsync(user, cancellationToken), Times.Once);
+    }
+
+    private void SetRefreshTokenCookie(string refreshToken)
+    {
+        sut.ControllerContext.HttpContext.Request.Headers.Cookie = $"{AuthenticationCookieNames.RefreshToken}={refreshToken}";
     }
 }

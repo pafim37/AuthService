@@ -5,6 +5,7 @@ using AuthServer.DataTransferObjects;
 using AuthServer.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
 
 namespace AuthServer.Controllers
@@ -20,6 +21,7 @@ namespace AuthServer.Controllers
     {
         [HttpPost("sign-up")]
         [AllowAnonymous]
+        [EnableRateLimiting("Authentication")]
         public async Task<IActionResult> SignUp([FromBody] CredentialsDto credetialsDto, CancellationToken cancellationToken)
         {
             if (!ValidateCredentials(credetialsDto))
@@ -56,6 +58,7 @@ namespace AuthServer.Controllers
 
         [HttpPost("sign-in")]
         [AllowAnonymous]
+        [EnableRateLimiting("Authentication")]
         public async Task<IActionResult> SignIn([FromBody] SignInDto signInDto, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(signInDto.Login) || string.IsNullOrWhiteSpace(signInDto.Password))
@@ -82,9 +85,10 @@ namespace AuthServer.Controllers
 
         [HttpPost("refresh")]
         [AllowAnonymous]
-        public async Task<IActionResult> Refresh([FromBody] RefreshTokenDto? refreshTokenDto, CancellationToken cancellationToken)
+        [EnableRateLimiting("Authentication")]
+        public async Task<IActionResult> Refresh(CancellationToken cancellationToken)
         {
-            string? refreshTokenValue = GetRefreshToken(refreshTokenDto);
+            string? refreshTokenValue = GetRefreshToken();
             if (string.IsNullOrWhiteSpace(refreshTokenValue))
             {
                 return BadRequest("Refresh token is required.");
@@ -123,6 +127,7 @@ namespace AuthServer.Controllers
 
         [HttpPost("admin-sign-in")]
         [AllowAnonymous]
+        [EnableRateLimiting("Authentication")]
         public async Task<IActionResult> AdminSignIn([FromBody] SignInDto signInDto, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(signInDto.Login) || string.IsNullOrWhiteSpace(signInDto.Password))
@@ -144,7 +149,6 @@ namespace AuthServer.Controllers
 
             if (!string.Equals(user.Role!.Name, "Administrator", StringComparison.OrdinalIgnoreCase))
             {
-                
                 return StatusCode(StatusCodes.Status403Forbidden, "Access denied. User does not have administrator privileges.");
             }
 
@@ -168,9 +172,9 @@ namespace AuthServer.Controllers
 
         [HttpPost("logout")]
         [Authorize]
-        public async Task<IActionResult> Logout([FromBody] RefreshTokenDto? refreshTokenDto, CancellationToken cancellationToken)
+        public async Task<IActionResult> Logout(CancellationToken cancellationToken)
         {
-            string? refreshTokenValue = GetRefreshToken(refreshTokenDto);
+            string? refreshTokenValue = GetRefreshToken();
             if (string.IsNullOrWhiteSpace(refreshTokenValue))
             {
                 DeleteAuthenticationCookies();
@@ -198,16 +202,17 @@ namespace AuthServer.Controllers
             }
 
             DeleteAuthenticationCookies();
-            return Ok("Logout successful.");
+            return Ok();
         }
 
         [HttpPost("change-password")]
         [Authorize]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto changePasswordDto, CancellationToken cancellationToken)
         {
-            if (string.IsNullOrWhiteSpace(changePasswordDto.NewPassword))
+            if (string.IsNullOrWhiteSpace(changePasswordDto.CurrentPassword)
+                || string.IsNullOrWhiteSpace(changePasswordDto.NewPassword))
             {
-                return BadRequest("New password is required.");
+                return BadRequest("Current password and new password are required.");
             }
 
             string? userIdValue = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -222,12 +227,17 @@ namespace AuthServer.Controllers
                 return Unauthorized("Invalid user.");
             }
 
+            if (!PasswordHasher.VerifyPassword(changePasswordDto.CurrentPassword, user.PasswordHashed))
+            {
+                return Unauthorized("Current password is invalid.");
+            }
+
             user.PasswordHashed = PasswordHasher.HashPassword(changePasswordDto.NewPassword);
             user.SessionVersion++;
 
             await userRepository.UpdateUserAsync(user, cancellationToken).ConfigureAwait(false);
 
-            return Ok("Password changed successfully.");
+            return Ok();
         }
 
         private async Task<AuthTokenDto> CreateTokenPairAsync(UserEntity user, CancellationToken cancellationToken)
@@ -254,13 +264,8 @@ namespace AuthServer.Controllers
                 && !string.IsNullOrWhiteSpace(credetialsDto.Password);
         }
 
-        private string? GetRefreshToken(RefreshTokenDto? refreshTokenDto)
+        private string? GetRefreshToken()
         {
-            if (!string.IsNullOrWhiteSpace(refreshTokenDto?.RefreshToken))
-            {
-                return refreshTokenDto.RefreshToken;
-            }
-
             return Request.Cookies.TryGetValue(AuthenticationCookieNames.RefreshToken, out string? refreshToken)
                 ? refreshToken
                 : null;

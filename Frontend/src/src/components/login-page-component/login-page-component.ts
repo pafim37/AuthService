@@ -75,11 +75,12 @@ export class LoginPageComponent {
           this._router.navigateByUrl('/dashboard');
         },
         error: (e) => {
-          if (e.status !== 403) {
-            this._snackBar.openSnackBar('Incorrect credential!');
-          }
-          else {
+          if (e.status === 423) {
+            this._snackBar.openSnackBar('Account is locked. Please try again later.');
+          } else if (e.status === 403) {
             this._snackBar.openSnackBar('No sufficient permission!');
+          } else {
+            this._snackBar.openSnackBar('Incorrect credential!');
           }
         },
       });
