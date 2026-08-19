@@ -1,4 +1,5 @@
-import { Component, effect, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButton } from '@angular/material/button';
 import {
@@ -42,6 +43,7 @@ type LoginFormGroup = FormGroup<{
 })
 export class LoginPageComponent {
   private readonly _authService = inject(AuthService);
+  private readonly _destroyRef = inject(DestroyRef);
   private readonly _router = inject(Router);
   private readonly _snackBar = inject(Snackbar);
 
@@ -67,6 +69,7 @@ export class LoginPageComponent {
 
     this._authService
       .signin(login, password)
+      .pipe(takeUntilDestroyed(this._destroyRef))
       .subscribe({
         next: () => {
           this._router.navigateByUrl('/dashboard');

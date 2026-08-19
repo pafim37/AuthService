@@ -1,4 +1,5 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
@@ -23,6 +24,7 @@ type ThemeMode = 'light' | 'dark';
 })
 export class AppHeaderComponent {
   private readonly authService = inject(AuthService);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly dialog = inject(MatDialog);
   private readonly router = inject(Router);
 
@@ -34,9 +36,12 @@ export class AppHeaderComponent {
   }
 
   public logout(): void {
-    this.authService.logout().subscribe(() => {
-      this.router.navigateByUrl('/sign-in');
-    });
+    this.authService
+      .logout()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.router.navigateByUrl('/sign-in');
+      });
   }
 
   public changePassword(): void {
@@ -46,6 +51,7 @@ export class AppHeaderComponent {
       .pipe(
         filter((result): result is ChangePasswordDialogResult => !!result),
         switchMap((result) => this.authService.changePassword(result)),
+        takeUntilDestroyed(this.destroyRef),
       )
       .subscribe();
   }

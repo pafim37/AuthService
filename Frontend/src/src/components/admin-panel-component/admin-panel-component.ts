@@ -1,4 +1,5 @@
-import { AfterViewInit, Component, ViewChild, inject, signal } from '@angular/core';
+import { AfterViewInit, Component, DestroyRef, ViewChild, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
@@ -44,6 +45,7 @@ import { MatTooltip } from '@angular/material/tooltip';
 
 export class AdminPanelComponent implements AfterViewInit {
   private readonly adminApiService = inject(AdminApiService);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(Snackbar);
 
@@ -116,7 +118,9 @@ export class AdminPanelComponent implements AfterViewInit {
       privileges: this.adminApiService.getPrivileges(),
       roles: this.adminApiService.getRoles(),
       users: this.adminApiService.getUsers(),
-    }).subscribe({
+    })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
       next: ({ privileges, roles, users }) => {
         this.privilegesSource.data = privileges;
         this.rolesSource.data = roles;
@@ -131,6 +135,7 @@ export class AdminPanelComponent implements AfterViewInit {
     this.dialog
       .open(UserDialogComponent, { data, width: '440px' })
       .afterClosed()
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((request?: UserRequest | UserUpdateRequest) => {
         if (!request) {
           return;
@@ -143,10 +148,12 @@ export class AdminPanelComponent implements AfterViewInit {
               ? this.adminApiService.createAdmin(request.login, (request as UserRequest).password)
               : this.adminApiService.createUser(request as UserRequest);
 
-        action.subscribe({
-          next: () => this.loadData(),
-          error: () => this.snackBar.openSnackBar('Cannot save user'),
-        });
+        action
+          .pipe(takeUntilDestroyed(this.destroyRef))
+          .subscribe({
+            next: () => this.loadData(),
+            error: () => this.snackBar.openSnackBar('Cannot save user'),
+          });
       });
   }
 
@@ -154,6 +161,7 @@ export class AdminPanelComponent implements AfterViewInit {
     this.dialog
       .open(RoleDialogComponent, { data, width: '440px' })
       .afterClosed()
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((request?: RoleRequest) => {
         if (!request) {
           return;
@@ -163,10 +171,12 @@ export class AdminPanelComponent implements AfterViewInit {
           ? this.adminApiService.updateRole(data.role.id, request)
           : this.adminApiService.createRole(request);
 
-        action.subscribe({
-          next: () => this.loadData(),
-          error: () => this.snackBar.openSnackBar('Cannot save role'),
-        });
+        action
+          .pipe(takeUntilDestroyed(this.destroyRef))
+          .subscribe({
+            next: () => this.loadData(),
+            error: () => this.snackBar.openSnackBar('Cannot save role'),
+          });
       });
   }
 
@@ -174,6 +184,7 @@ export class AdminPanelComponent implements AfterViewInit {
     this.dialog
       .open(PrivilegeDialogComponent, { data, width: '360px' })
       .afterClosed()
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((request?: PrivilegeRequest) => {
         if (!request) {
           return;
@@ -183,10 +194,12 @@ export class AdminPanelComponent implements AfterViewInit {
           ? this.adminApiService.updatePrivilege(data.privilege.id, request)
           : this.adminApiService.createPrivilege(request);
 
-        action.subscribe({
-          next: () => this.loadData(),
-          error: () => this.snackBar.openSnackBar('Cannot save privilege'),
-        });
+        action
+          .pipe(takeUntilDestroyed(this.destroyRef))
+          .subscribe({
+            next: () => this.loadData(),
+            error: () => this.snackBar.openSnackBar('Cannot save privilege'),
+          });
       });
   }
 
@@ -194,15 +207,18 @@ export class AdminPanelComponent implements AfterViewInit {
     this.dialog
       .open(ConfirmDialogComponent, { data: message, width: '360px' })
       .afterClosed()
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((confirmed?: boolean) => {
         if (!confirmed) {
           return;
         }
 
-        actionFactory().subscribe({
-          next: () => this.loadData(),
-          error: () => this.snackBar.openSnackBar('Cannot remove item'),
-        });
+        actionFactory()
+          .pipe(takeUntilDestroyed(this.destroyRef))
+          .subscribe({
+            next: () => this.loadData(),
+            error: () => this.snackBar.openSnackBar('Cannot remove item'),
+          });
       });
   }
 }
