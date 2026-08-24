@@ -13,6 +13,7 @@ import {
 import { MatFormField, MatLabel } from '@angular/material/form-field';
 import { MatInput } from '@angular/material/input';
 import { Router } from '@angular/router';
+import { finalize } from 'rxjs';
 import { AuthService } from '../../services/auth-service';
 import { Snackbar } from '../snackbar/snackbar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -65,11 +66,14 @@ export class LoginPageComponent {
     }
 
     const { login, password } = this.loginForm.getRawValue();
-    this.loginForm.disabled;
+    this.loginForm.disable();
 
     this._authService
       .signin(login, password)
-      .pipe(takeUntilDestroyed(this._destroyRef))
+      .pipe(
+        finalize(() => this.loginForm.enable()),
+        takeUntilDestroyed(this._destroyRef),
+      )
       .subscribe({
         next: () => {
           this._router.navigateByUrl('/dashboard');

@@ -27,6 +27,7 @@ export interface UserRequest {
 export interface UserUpdateRequest {
   login: string;
   role: string;
+  password?: string;
 }
 
 export interface RoleRequest {

@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
+using System.Security.Cryptography;
 
 namespace AuthServer.Controllers
 {
@@ -51,9 +52,9 @@ namespace AuthServer.Controllers
             };
 
             await userRepository.CreateUserAsync(user, cancellationToken).ConfigureAwait(false);
-            AuthTokenDto tokens = await CreateTokenPairAsync(user, cancellationToken).ConfigureAwait(false);
+            AuthTokenPair tokens = await CreateTokenPairAsync(user, cancellationToken).ConfigureAwait(false);
             AppendAuthenticationCookies(tokens);
-            return Created(string.Empty, tokens);
+            return Created(string.Empty, ToSessionDto(tokens));
         }
 
         [HttpPost("sign-in")]
@@ -78,9 +79,9 @@ namespace AuthServer.Controllers
                 return Unauthorized("Invalid login or password.");
             }
 
-            AuthTokenDto tokens = await CreateTokenPairAsync(user, cancellationToken).ConfigureAwait(false);
+            AuthTokenPair tokens = await CreateTokenPairAsync(user, cancellationToken).ConfigureAwait(false);
             AppendAuthenticationCookies(tokens);
-            return Ok(tokens);
+            return Ok(ToSessionDto(tokens));
         }
 
         [HttpPost("refresh")]
@@ -113,7 +114,7 @@ namespace AuthServer.Controllers
                 .ConfigureAwait(false);
 
             AccessTokenResult accessToken = jwtTokenService.CreateAccessToken(user);
-            AuthTokenDto tokens = new()
+            AuthTokenPair tokens = new()
             {
                 AccessToken = accessToken.Token,
                 RefreshToken = newRefreshToken.Token,
@@ -122,7 +123,7 @@ namespace AuthServer.Controllers
             };
 
             AppendAuthenticationCookies(tokens);
-            return Ok(tokens);
+            return Ok(ToSessionDto(tokens));
         }
 
         [HttpPost("admin-sign-in")]
@@ -147,14 +148,14 @@ namespace AuthServer.Controllers
                 return Unauthorized("Invalid login or password.");
             }
 
-            if (!string.Equals(user.Role!.Name, "Administrator", StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(user.Role?.Name, "Administrator", StringComparison.OrdinalIgnoreCase))
             {
                 return StatusCode(StatusCodes.Status403Forbidden, "Access denied. User does not have administrator privileges.");
             }
 
-            AuthTokenDto tokens = await CreateTokenPairAsync(user, cancellationToken).ConfigureAwait(false);
+            AuthTokenPair tokens = await CreateTokenPairAsync(user, cancellationToken).ConfigureAwait(false);
             AppendAuthenticationCookies(tokens);
-            return Ok(tokens);
+            return Ok(ToSessionDto(tokens));
         }
 
         [HttpGet("me")]
@@ -240,7 +241,7 @@ namespace AuthServer.Controllers
             return Ok();
         }
 
-        private async Task<AuthTokenDto> CreateTokenPairAsync(UserEntity user, CancellationToken cancellationToken)
+        private async Task<AuthTokenPair> CreateTokenPairAsync(UserEntity user, CancellationToken cancellationToken)
         {
             AccessTokenResult accessToken = jwtTokenService.CreateAccessToken(user);
             RefreshTokenResult refreshToken = await refreshTokenService
@@ -249,7 +250,7 @@ namespace AuthServer.Controllers
 
             await refreshTokenService.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-            return new AuthTokenDto
+            return new AuthTokenPair
             {
                 AccessToken = accessToken.Token,
                 RefreshToken = refreshToken.Token,
@@ -271,7 +272,7 @@ namespace AuthServer.Controllers
                 : null;
         }
 
-        private void AppendAuthenticationCookies(AuthTokenDto tokens)
+        private void AppendAuthenticationCookies(AuthTokenPair tokens)
         {
             Response.Cookies.Append(
                 AuthenticationCookieNames.AccessToken,
@@ -282,12 +283,27 @@ namespace AuthServer.Controllers
                 AuthenticationCookieNames.RefreshToken,
                 tokens.RefreshToken,
                 CreateCookieOptions(tokens.RefreshTokenExpiresAtUtc));
+
+            Response.Cookies.Append(
+                AuthenticationCookieNames.CsrfToken,
+                GenerateCsrfToken(),
+                CreateCsrfCookieOptions(tokens.RefreshTokenExpiresAtUtc));
         }
 
         private void DeleteAuthenticationCookies()
         {
             Response.Cookies.Delete(AuthenticationCookieNames.AccessToken, CreateDeleteCookieOptions());
             Response.Cookies.Delete(AuthenticationCookieNames.RefreshToken, CreateDeleteCookieOptions());
+            Response.Cookies.Delete(AuthenticationCookieNames.CsrfToken, CreateDeleteCookieOptions());
+        }
+
+        private static AuthSessionDto ToSessionDto(AuthTokenPair tokens)
+        {
+            return new AuthSessionDto
+            {
+                ExpiresAtUtc = tokens.ExpiresAtUtc,
+                RefreshTokenExpiresAtUtc = tokens.RefreshTokenExpiresAtUtc
+            };
         }
 
         private CookieOptions CreateCookieOptions(DateTime expiresAtUtc)
@@ -315,6 +331,31 @@ namespace AuthServer.Controllers
         private bool ShouldUseSecureCookies()
         {
             return !webHostEnvironment.IsDevelopment() || Request.IsHttps;
+        }
+
+        private CookieOptions CreateCsrfCookieOptions(DateTime expiresAtUtc)
+        {
+            return new()
+            {
+                HttpOnly = false,
+                Secure = ShouldUseSecureCookies(),
+                SameSite = SameSiteMode.Strict,
+                Expires = new DateTimeOffset(expiresAtUtc),
+                Path = "/"
+            };
+        }
+
+        private static string GenerateCsrfToken()
+        {
+            return Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+        }
+
+        private sealed class AuthTokenPair
+        {
+            public string AccessToken { get; set; } = string.Empty;
+            public string RefreshToken { get; set; } = string.Empty;
+            public DateTime ExpiresAtUtc { get; set; }
+            public DateTime RefreshTokenExpiresAtUtc { get; set; }
         }
     }
 }

@@ -4,6 +4,7 @@ using AuthServer.Database.Repositories;
 using AuthServer.DataTransferObjects;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
+using System.Text.Json;
 
 namespace AuthServerUnitTests;
 
@@ -152,7 +153,7 @@ public class PrivilegeControllerTests
         Guid id = Guid.NewGuid();
         privilegeRepository.Setup(m => m.GetPrivilegeByIdAsync(id, cancellationToken)).ReturnsAsync((PrivilegeEntity?)null);
 
-        IActionResult result = await sut.PatchPrivilege(id, new PrivilegeRequestDto(), cancellationToken);
+        IActionResult result = await sut.PatchPrivilege(id, new PrivilegePatchDto(), cancellationToken);
 
         Assert.IsType<NotFoundObjectResult>(result);
     }
@@ -164,7 +165,7 @@ public class PrivilegeControllerTests
         privilegeRepository.Setup(m => m.GetPrivilegeByIdAsync(id, cancellationToken)).ReturnsAsync(ControllerTestHelpers.Privilege("Read"));
         privilegeRepository.Setup(m => m.GetPrivilegeByNameAsync("Write", cancellationToken)).ReturnsAsync(ControllerTestHelpers.Privilege("Write"));
 
-        IActionResult result = await sut.PatchPrivilege(id, new PrivilegeRequestDto { Name = "Write" }, cancellationToken);
+        IActionResult result = await sut.PatchPrivilege(id, new PrivilegePatchDto { Name = "Write" }, cancellationToken);
 
         Assert.IsType<ConflictObjectResult>(result);
     }
@@ -176,12 +177,24 @@ public class PrivilegeControllerTests
         privilegeRepository.Setup(m => m.GetPrivilegeByIdAsync(privilege.Id, cancellationToken)).ReturnsAsync(privilege);
         privilegeRepository.Setup(m => m.GetPrivilegeByNameAsync("Write", cancellationToken)).ReturnsAsync((PrivilegeEntity?)null);
 
-        IActionResult result = await sut.PatchPrivilege(privilege.Id, new PrivilegeRequestDto { Name = "Write", Description = "New" }, cancellationToken);
+        IActionResult result = await sut.PatchPrivilege(privilege.Id, new PrivilegePatchDto { Name = "Write", Description = JsonSerializer.Deserialize<JsonElement>("\"New\"") }, cancellationToken);
 
         PrivilegeDto dto = ControllerTestHelpers.OkValueOf<PrivilegeDto>(result);
         Assert.Equal("Write", dto.Name);
         Assert.Equal("New", dto.Description);
         privilegeRepository.Verify(m => m.UpdatePrivilegeAsync(privilege, cancellationToken), Times.Once);
+    }
+
+    [Fact]
+    public async Task PatchPrivilege_WhenDescriptionIsNull_ClearsDescription()
+    {
+        PrivilegeEntity privilege = ControllerTestHelpers.Privilege("Read", "Old");
+        privilegeRepository.Setup(m => m.GetPrivilegeByIdAsync(privilege.Id, cancellationToken)).ReturnsAsync(privilege);
+
+        IActionResult result = await sut.PatchPrivilege(privilege.Id, new PrivilegePatchDto { Description = JsonSerializer.Deserialize<JsonElement>("null") }, cancellationToken);
+
+        PrivilegeDto dto = ControllerTestHelpers.OkValueOf<PrivilegeDto>(result);
+        Assert.Null(dto.Description);
     }
 
     [Fact]

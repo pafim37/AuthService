@@ -60,7 +60,7 @@ public class AuthControllerTests
     }
 
     [Fact]
-    public async Task SignUp_WhenRequestIsValid_ReturnsCreatedTokens()
+    public async Task SignUp_WhenRequestIsValid_ReturnsCreatedSession()
     {
         RoleEntity role = ControllerTestHelpers.Role("Default");
         userRepository.Setup(m => m.GetUserByLoginAsync("user", cancellationToken)).ReturnsAsync((UserEntity?)null);
@@ -68,9 +68,9 @@ public class AuthControllerTests
 
         IActionResult result = await sut.SignUp(new CredentialsDto { Login = "user", Password = "password" }, cancellationToken);
 
-        AuthTokenDto tokens = ControllerTestHelpers.CreatedValueOf<AuthTokenDto>(result);
-        Assert.False(string.IsNullOrWhiteSpace(tokens.AccessToken));
-        Assert.False(string.IsNullOrWhiteSpace(tokens.RefreshToken));
+        AuthSessionDto session = ControllerTestHelpers.CreatedValueOf<AuthSessionDto>(result);
+        Assert.True(session.ExpiresAtUtc > DateTime.UtcNow);
+        Assert.True(session.RefreshTokenExpiresAtUtc > DateTime.UtcNow);
         userRepository.Verify(m => m.CreateUserAsync(It.Is<UserEntity>(u => u.Role == role), cancellationToken), Times.Once);
     }
 
@@ -114,16 +114,16 @@ public class AuthControllerTests
     }
 
     [Fact]
-    public async Task SignIn_WhenCredentialsAreValid_ReturnsTokens()
+    public async Task SignIn_WhenCredentialsAreValid_ReturnsSession()
     {
         UserEntity user = ControllerTestHelpers.User("user", BCrypt.Net.BCrypt.HashPassword("password"));
         userRepository.Setup(m => m.GetUserByLoginAsync("user", cancellationToken)).ReturnsAsync(user);
 
         IActionResult result = await sut.SignIn(new SignInDto { Login = "user", Password = "password" }, cancellationToken);
 
-        AuthTokenDto tokens = ControllerTestHelpers.OkValueOf<AuthTokenDto>(result);
-        Assert.False(string.IsNullOrWhiteSpace(tokens.AccessToken));
-        Assert.False(string.IsNullOrWhiteSpace(tokens.RefreshToken));
+        AuthSessionDto session = ControllerTestHelpers.OkValueOf<AuthSessionDto>(result);
+        Assert.True(session.ExpiresAtUtc > DateTime.UtcNow);
+        Assert.True(session.RefreshTokenExpiresAtUtc > DateTime.UtcNow);
     }
 
     [Fact]
@@ -145,7 +145,7 @@ public class AuthControllerTests
     }
 
     [Fact]
-    public async Task Refresh_WhenTokenIsValid_ReturnsNewTokens()
+    public async Task Refresh_WhenTokenIsValid_ReturnsNewSession()
     {
         UserEntity user = ControllerTestHelpers.User("user");
         var refreshTokenService = new RefreshTokenService(authContext, ControllerTestHelpers.TestConfiguration());
@@ -156,10 +156,9 @@ public class AuthControllerTests
 
         IActionResult result = await sut.Refresh(cancellationToken);
 
-        AuthTokenDto tokens = ControllerTestHelpers.OkValueOf<AuthTokenDto>(result);
-        Assert.False(string.IsNullOrWhiteSpace(tokens.AccessToken));
-        Assert.False(string.IsNullOrWhiteSpace(tokens.RefreshToken));
-        Assert.NotEqual(refreshToken.Token, tokens.RefreshToken);
+        AuthSessionDto session = ControllerTestHelpers.OkValueOf<AuthSessionDto>(result);
+        Assert.True(session.ExpiresAtUtc > DateTime.UtcNow);
+        Assert.True(session.RefreshTokenExpiresAtUtc > DateTime.UtcNow);
     }
 
     [Fact]
@@ -204,14 +203,15 @@ public class AuthControllerTests
     }
 
     [Fact]
-    public async Task AdminSignIn_WhenAdministratorCredentialsAreValid_ReturnsTokens()
+    public async Task AdminSignIn_WhenAdministratorCredentialsAreValid_ReturnsSession()
     {
         UserEntity user = ControllerTestHelpers.User("admin", BCrypt.Net.BCrypt.HashPassword("password"), ControllerTestHelpers.Role("Administrator"));
         userRepository.Setup(m => m.GetUserByLoginAsync("admin", cancellationToken)).ReturnsAsync(user);
 
         IActionResult result = await sut.AdminSignIn(new SignInDto { Login = "admin", Password = "password" }, cancellationToken);
 
-        Assert.False(string.IsNullOrWhiteSpace(ControllerTestHelpers.OkValueOf<AuthTokenDto>(result).AccessToken));
+        AuthSessionDto session = ControllerTestHelpers.OkValueOf<AuthSessionDto>(result);
+        Assert.True(session.ExpiresAtUtc > DateTime.UtcNow);
     }
 
     [Fact]

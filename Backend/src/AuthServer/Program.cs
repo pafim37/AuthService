@@ -145,6 +145,34 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseRateLimiter();
+app.Use(async (context, next) =>
+{
+    bool isApiRequest = context.Request.Path.StartsWithSegments("/api");
+    bool isUnsafeMethod = HttpMethods.IsPost(context.Request.Method)
+        || HttpMethods.IsPut(context.Request.Method)
+        || HttpMethods.IsPatch(context.Request.Method)
+        || HttpMethods.IsDelete(context.Request.Method);
+    bool usesCookieAuthentication = context.Request.Cookies.ContainsKey(AuthenticationCookieNames.AccessToken);
+    bool isAnonymousAuthEndpoint = context.Request.Path.StartsWithSegments("/api/auth/sign-in")
+        || context.Request.Path.StartsWithSegments("/api/auth/admin-sign-in")
+        || context.Request.Path.StartsWithSegments("/api/auth/sign-up")
+        || context.Request.Path.StartsWithSegments("/api/auth/refresh");
+
+    if (isApiRequest && isUnsafeMethod && usesCookieAuthentication && !isAnonymousAuthEndpoint)
+    {
+        string? csrfCookie = context.Request.Cookies[AuthenticationCookieNames.CsrfToken];
+        string? csrfHeader = context.Request.Headers["X-CSRF-TOKEN"].FirstOrDefault();
+
+        if (string.IsNullOrWhiteSpace(csrfCookie) || !string.Equals(csrfCookie, csrfHeader, StringComparison.Ordinal))
+        {
+            context.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await context.Response.WriteAsync("Invalid CSRF token.");
+            return;
+        }
+    }
+
+    await next();
+});
 app.UseAuthentication();
 app.UseAuthorization();
 

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
 using AuthServerIntegrationTests.Unauthorized;
@@ -14,6 +13,8 @@ namespace AuthServerIntegrationTests;
 public sealed class EndpointReturnTests(DockerComposeFixture fixture)
 {
     private static readonly Guid MissingId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+    private readonly object resetClient = ResetClient(fixture.Client);
+    private AuthCookies? currentAuth;
 
     [Fact]
     public async Task AuthSignUp_ReturnsBadRequest_WhenPayloadIsInvalid()
@@ -36,10 +37,12 @@ public sealed class EndpointReturnTests(DockerComposeFixture fixture)
     {
         using HttpResponseMessage response = await fixture.Client.PostAsJsonAsync("/api/auth/sign-up", new { Login = Unique("signup"), Password = "password" });
 
-        AuthTokenDto? tokens = await response.Content.ReadFromJsonAsync<AuthTokenDto>();
+        AuthSessionDto? session = await response.Content.ReadFromJsonAsync<AuthSessionDto>();
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        Assert.False(string.IsNullOrWhiteSpace(tokens?.AccessToken));
-        Assert.False(string.IsNullOrWhiteSpace(tokens?.RefreshToken));
+        Assert.NotNull(session);
+        Assert.True(response.Headers.TryGetValues("Set-Cookie", out IEnumerable<string>? signUpCookies));
+        Assert.Contains(signUpCookies, cookie => cookie.StartsWith("auth_access_token=", StringComparison.Ordinal));
+        Assert.Contains(signUpCookies, cookie => cookie.StartsWith("auth_refresh_token=", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -71,10 +74,12 @@ public sealed class EndpointReturnTests(DockerComposeFixture fixture)
     {
         using HttpResponseMessage response = await fixture.Client.PostAsJsonAsync("/api/auth/sign-in", new { Login = "admin", Password = "admin" });
 
-        AuthTokenDto? tokens = await response.Content.ReadFromJsonAsync<AuthTokenDto>();
+        AuthSessionDto? session = await response.Content.ReadFromJsonAsync<AuthSessionDto>();
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.False(string.IsNullOrWhiteSpace(tokens?.AccessToken));
-        Assert.False(string.IsNullOrWhiteSpace(tokens?.RefreshToken));
+        Assert.NotNull(session);
+        Assert.True(response.Headers.TryGetValues("Set-Cookie", out IEnumerable<string>? signInCookies));
+        Assert.Contains(signInCookies, cookie => cookie.StartsWith("auth_access_token=", StringComparison.Ordinal));
+        Assert.Contains(signInCookies, cookie => cookie.StartsWith("auth_refresh_token=", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -96,14 +101,13 @@ public sealed class EndpointReturnTests(DockerComposeFixture fixture)
     [Fact]
     public async Task AuthRefresh_ReturnsOk_WhenRefreshTokenIsValid()
     {
-        AuthTokenDto tokens = await SignInAsync("admin", "admin");
+        AuthCookies tokens = await SignInAsync("admin", "admin");
 
         using HttpResponseMessage response = await SendWithRefreshTokenCookieAsync("/api/auth/refresh", tokens.RefreshToken);
 
-        AuthTokenDto? refreshedTokens = await response.Content.ReadFromJsonAsync<AuthTokenDto>();
+        AuthSessionDto? refreshedTokens = await response.Content.ReadFromJsonAsync<AuthSessionDto>();
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.False(string.IsNullOrWhiteSpace(refreshedTokens?.AccessToken));
-        Assert.False(string.IsNullOrWhiteSpace(refreshedTokens?.RefreshToken));
+        Assert.NotNull(refreshedTokens);
     }
 
     [Fact]
@@ -147,9 +151,9 @@ public sealed class EndpointReturnTests(DockerComposeFixture fixture)
     {
         using HttpResponseMessage response = await fixture.Client.PostAsJsonAsync("/api/auth/admin-sign-in", new { Login = "admin", Password = "admin" });
 
-        AuthTokenDto? tokens = await response.Content.ReadFromJsonAsync<AuthTokenDto>();
+        AuthSessionDto? session = await response.Content.ReadFromJsonAsync<AuthSessionDto>();
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.False(string.IsNullOrWhiteSpace(tokens?.AccessToken));
+        Assert.NotNull(session);
     }
 
     [Fact]
@@ -165,7 +169,8 @@ public sealed class EndpointReturnTests(DockerComposeFixture fixture)
     [Fact]
     public async Task AuthLogout_ReturnsBadRequest_WhenRefreshTokenIsMissing()
     {
-        await AuthorizeAsAdminAsync();
+        AuthCookies auth = await SignInAsync("admin", "admin");
+        SetAuthenticationWithoutRefresh(auth);
 
         using HttpResponseMessage response = await fixture.Client.PostAsync("/api/auth/logout", null);
 
@@ -185,8 +190,8 @@ public sealed class EndpointReturnTests(DockerComposeFixture fixture)
     [Fact]
     public async Task AuthLogout_ReturnsOk_WhenRefreshTokenIsActive()
     {
-        AuthTokenDto tokens = await SignInAsync("admin", "admin");
-        SetAuthorization(tokens.AccessToken);
+        AuthCookies tokens = await SignInAsync("admin", "admin");
+        SetAuthentication(tokens);
 
         using HttpResponseMessage response = await SendWithRefreshTokenCookieAsync("/api/auth/logout", tokens.RefreshToken);
 
@@ -201,8 +206,7 @@ public sealed class EndpointReturnTests(DockerComposeFixture fixture)
         string newPassword = "new-password";
 
         using HttpResponseMessage signUpResponse = await fixture.Client.PostAsJsonAsync("/api/auth/sign-up", new { Login = login, Password = originalPassword });
-        AuthTokenDto tokens = (await signUpResponse.Content.ReadFromJsonAsync<AuthTokenDto>())!;
-        SetAuthorization(tokens.AccessToken);
+        SetAuthentication(GetAuthCookies(signUpResponse));
 
         using HttpResponseMessage changePasswordResponse = await fixture.Client.PostAsJsonAsync("/api/auth/change-password", new { CurrentPassword = originalPassword, NewPassword = newPassword });
         Assert.Equal(HttpStatusCode.OK, changePasswordResponse.StatusCode);
@@ -407,32 +411,84 @@ public sealed class EndpointReturnTests(DockerComposeFixture fixture)
 
     private async Task AuthorizeAsAdminAsync()
     {
-        AuthTokenDto tokens = await SignInAsync("admin", "admin");
-        SetAuthorization(tokens.AccessToken);
+        SetAuthentication(await SignInAsync("admin", "admin"));
     }
 
     private async Task<HttpResponseMessage> SendWithRefreshTokenCookieAsync(string url, string refreshToken)
     {
         using HttpRequestMessage request = new(HttpMethod.Post, url);
-        request.Headers.Add("Cookie", $"auth_refresh_token={refreshToken}");
+        string cookieHeader = currentAuth is null
+            ? $"auth_refresh_token={refreshToken}"
+            : $"auth_access_token={currentAuth.AccessToken}; auth_refresh_token={refreshToken}; auth_csrf_token={currentAuth.CsrfToken}";
+        request.Headers.Add("Cookie", cookieHeader);
+        if (currentAuth is not null)
+        {
+            request.Headers.Add("X-CSRF-TOKEN", currentAuth.CsrfToken);
+        }
+
         return await fixture.Client.SendAsync(request);
     }
 
-    private async Task<AuthTokenDto> SignInAsync(string login, string password)
+    private async Task<AuthCookies> SignInAsync(string login, string password)
     {
         using HttpResponseMessage response = await fixture.Client.PostAsJsonAsync("/api/auth/sign-in", new { Login = login, Password = password });
         response.EnsureSuccessStatusCode();
-        return (await response.Content.ReadFromJsonAsync<AuthTokenDto>())!;
+        return GetAuthCookies(response);
     }
 
-    private void SetAuthorization(string accessToken)
+    private void SetAuthentication(AuthCookies cookies)
     {
-        fixture.Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        currentAuth = cookies;
+        fixture.Client.DefaultRequestHeaders.Authorization = null;
+        fixture.Client.DefaultRequestHeaders.Remove("Cookie");
+        fixture.Client.DefaultRequestHeaders.Remove("X-CSRF-TOKEN");
+        fixture.Client.DefaultRequestHeaders.Add("Cookie", cookies.Header);
+        fixture.Client.DefaultRequestHeaders.Add("X-CSRF-TOKEN", cookies.CsrfToken);
+    }
+
+    private void SetAuthenticationWithoutRefresh(AuthCookies cookies)
+    {
+        currentAuth = cookies;
+        fixture.Client.DefaultRequestHeaders.Authorization = null;
+        fixture.Client.DefaultRequestHeaders.Remove("Cookie");
+        fixture.Client.DefaultRequestHeaders.Remove("X-CSRF-TOKEN");
+        fixture.Client.DefaultRequestHeaders.Add("Cookie", $"auth_access_token={cookies.AccessToken}; auth_csrf_token={cookies.CsrfToken}");
+        fixture.Client.DefaultRequestHeaders.Add("X-CSRF-TOKEN", cookies.CsrfToken);
     }
 
     private void ClearAuthorization()
     {
+        currentAuth = null;
         fixture.Client.DefaultRequestHeaders.Authorization = null;
+        fixture.Client.DefaultRequestHeaders.Remove("Cookie");
+        fixture.Client.DefaultRequestHeaders.Remove("X-CSRF-TOKEN");
+    }
+
+    private static AuthCookies GetAuthCookies(HttpResponseMessage response)
+    {
+        IEnumerable<string> setCookies = response.Headers.TryGetValues("Set-Cookie", out IEnumerable<string>? values)
+            ? values
+            : [];
+
+        Dictionary<string, string> cookies = setCookies
+            .Select(cookie => cookie.Split(';', 2)[0])
+            .Select(cookie => cookie.Split('=', 2))
+            .Where(parts => parts.Length == 2)
+            .ToDictionary(parts => parts[0], parts => parts[1], StringComparer.Ordinal);
+
+        return new AuthCookies(
+            $"auth_access_token={cookies["auth_access_token"]}; auth_refresh_token={cookies["auth_refresh_token"]}; auth_csrf_token={cookies["auth_csrf_token"]}",
+            cookies["auth_access_token"],
+            cookies["auth_refresh_token"],
+            Uri.UnescapeDataString(cookies["auth_csrf_token"]));
+    }
+
+    private static object ResetClient(HttpClient client)
+    {
+        client.DefaultRequestHeaders.Authorization = null;
+        client.DefaultRequestHeaders.Remove("Cookie");
+        client.DefaultRequestHeaders.Remove("X-CSRF-TOKEN");
+        return new();
     }
 
     private async Task<PrivilegeDto> CreatePrivilegeAsync(string name)
@@ -482,10 +538,12 @@ public sealed class EndpointReturnTests(DockerComposeFixture fixture)
         return $"{prefix}-{Guid.NewGuid():N}";
     }
 
-    private sealed class AuthTokenDto
+    private sealed record AuthCookies(string Header, string AccessToken, string RefreshToken, string CsrfToken);
+
+    private sealed class AuthSessionDto
     {
-        public string AccessToken { get; set; } = string.Empty;
-        public string RefreshToken { get; set; } = string.Empty;
+        public DateTime ExpiresAtUtc { get; set; }
+        public DateTime RefreshTokenExpiresAtUtc { get; set; }
     }
 
     private sealed class PrivilegeDto

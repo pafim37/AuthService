@@ -7,9 +7,7 @@ interface SignInRequest {
   password: string;
 }
 
-export interface AuthToken {
-  accessToken: string;
-  refreshToken: string;
+export interface AuthSession {
   expiresAtUtc: string;
   refreshTokenExpiresAtUtc: string;
 }
@@ -32,13 +30,13 @@ export class AuthService {
 
   constructor(private readonly httpClient: HttpClient) {}
 
-  signin(login: string, password: string): Observable<AuthToken> {
+  signin(login: string, password: string): Observable<AuthSession> {
     const request: SignInRequest = {
       login,
       password,
     };
 
-    return this.httpClient.post<AuthToken>('/api/auth/admin-sign-in', request, { withCredentials: true }).pipe(
+    return this.httpClient.post<AuthSession>('/api/auth/admin-sign-in', request).pipe(
       tap(() => {
         this.currentUser.set(login);
       }),
@@ -46,7 +44,7 @@ export class AuthService {
   }
 
   loadCurrentUser(): Observable<string | null> {
-    return this.httpClient.get<CurrentUser>('/api/auth/me', { withCredentials: true }).pipe(
+    return this.httpClient.get<CurrentUser>('/api/auth/me').pipe(
       map((user) => user.login),
       tap((login) => this.currentUser.set(login)),
       catchError(() => {
@@ -57,13 +55,13 @@ export class AuthService {
   }
 
   logout(): Observable<void> {
-    return this.httpClient.post<void>('/api/auth/logout', {}, { withCredentials: true }).pipe(
+    return this.httpClient.post<void>('/api/auth/logout', {}).pipe(
       catchError(() => of(undefined)),
       tap(() => this.currentUser.set(null)),
     );
   }
 
   changePassword(request: ChangePasswordRequest): Observable<void> {
-    return this.httpClient.post<void>('/api/auth/change-password', request, { withCredentials: true });
+    return this.httpClient.post<void>('/api/auth/change-password', request);
   }
 }

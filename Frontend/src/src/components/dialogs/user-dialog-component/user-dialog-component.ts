@@ -43,7 +43,6 @@ export class UserDialogComponent {
     }),
     password: new FormControl('', {
       nonNullable: true,
-      validators: this.data.mode === 'edit' ? [] : Validators.required,
     }),
     role: new FormControl(this.data.user?.role?.name ?? '', {
       nonNullable: true,
@@ -62,6 +61,7 @@ export class UserDialogComponent {
         ? {
             login: request.login,
             role: request.role,
+            ...(request.password ? { password: request.password } : {}),
           }
         : {
             login: request.login,

@@ -3,6 +3,7 @@ using AuthServer.Database.Repositories;
 using AuthServer.DataTransferObjects;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 
 namespace AuthServer.Controllers
 {
@@ -86,7 +87,7 @@ namespace AuthServer.Controllers
         }
 
         [HttpPatch("{id:guid}")]
-        public async Task<IActionResult> PatchPrivilege(Guid id, [FromBody] PrivilegeRequestDto privilegeDto, CancellationToken cancellationToken)
+        public async Task<IActionResult> PatchPrivilege(Guid id, [FromBody] PrivilegePatchDto privilegeDto, CancellationToken cancellationToken)
         {
             PrivilegeEntity? privilege = await privilegeRepository.GetPrivilegeByIdAsync(id, cancellationToken).ConfigureAwait(false);
             if (privilege is null)
@@ -105,9 +106,11 @@ namespace AuthServer.Controllers
                 privilege.Name = privilegeDto.Name;
             }
 
-            if (!string.IsNullOrWhiteSpace(privilegeDto.Description))
+            if (privilegeDto.Description is JsonElement description)
             {
-                privilege.Description = privilegeDto.Description;
+                privilege.Description = description.ValueKind == System.Text.Json.JsonValueKind.Null
+                    ? null
+                    : description.GetString();
             }
 
             await privilegeRepository.UpdatePrivilegeAsync(privilege, cancellationToken).ConfigureAwait(false);

@@ -6,12 +6,10 @@
       <input matInput formControlName="login" autocomplete="username" />
     </mat-form-field>
 
-    @if (data.mode !== 'edit') {
-      <mat-form-field appearance="outline">
-        <mat-label>Password</mat-label>
-        <input matInput type="password" formControlName="password" autocomplete="new-password" />
-      </mat-form-field>
-    }
+    <mat-form-field appearance="outline">
+      <mat-label>{{ data.mode === 'edit' ? 'New password' : 'Password' }}</mat-label>
+      <input matInput type="password" formControlName="password" autocomplete="new-password" />
+    </mat-form-field>
 
     @if (data.mode === 'edit') {
       <mat-form-field appearance="outline">
